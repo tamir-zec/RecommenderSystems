@@ -27,20 +27,16 @@ class RecommenderSystem:
         items = np.array(items)
         self.total_users = len(np.unique(users))
         self.total_items = len(np.unique(items))
-        # Initialize bias vectors
-        self.user_bias = np.random.random(self.total_users)
-        self.item_bias = np.random.random(self.total_items)
-
         self.total_ratings = len(ratings)
         self.avg_ratings = np.mean(ratings)
         self.users2id = {user: idx for idx, user in enumerate(np.unique(users))}
         self.item2id = {item: idx for idx, item in enumerate(np.unique(items))}
         map_users = lambda x: self.users2id[x]
         map_item = lambda x: self.item2id[x]
-
+        # Convert ids to indices
         users = np.array([map_users(user_i) for user_i in users])
         items = np.array([map_item(item_i) for item_i in items])
-
+        # Create rating matrix as sparse matrix
         self.ratings_matrix = sparse.csr_matrix((ratings, (np.array(users), np.array(items))),
                                                 shape=(self.total_users, self.total_items))
 
@@ -51,7 +47,7 @@ class RecommenderSystem:
         result = (ratings - predictions).power(2)
         return np.square(result.sum() / N)
 
-    def TrainBaseModel(self, n_iter=10):
+    def TrainBaseModel(self, n_iter=20):
         rmse = []
         # shuffle entries and calculate SGD for each user/item
         sgd_indices = np.arange(len(self.idx_row))
@@ -61,12 +57,18 @@ class RecommenderSystem:
             predictons = self.calc_predictions()
             rmse.append(self.calc_rmse(self.val_rating_matrix, predictons))
 
-        # Save parameters and rmse result to file
+        # Save parameters and RMSE result to file
+        # Add stop rule
         print(rmse)
 
     def initialize_data(self):
+        # Initialize bias vectors
+        self.user_bias = np.random.random(self.total_users)
+        self.item_bias = np.random.random(self.total_items)
+        # initialize latent factors matrices
         self.users_matrix = np.random.rand(self.total_users, self.latent_factors)
         self.items_matrix = np.random.rand(self.latent_factors, self.total_items)
+        # Keep the indices and values of the non-zero entries in the sparse matrix
         self.idx_row, self.idx_col, self.rating_val = sparse.find(self.ratings_matrix)
         # split to train/validation
         self.train_ratings_matrix, self.val_rating_matrix = self.train_validation_split()
