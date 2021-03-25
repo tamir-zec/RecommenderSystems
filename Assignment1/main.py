@@ -19,14 +19,16 @@ if __name__ == '__main__':
                     recsys.sgd_step_size = sgd_step_size
                     recsys.latent_factors = latent_factors
                     recsys.initialize_data()
-                    rmse_results, n = recsys.TrainBaseModel(n_iter)
+                    rmse_results, mae_results, n = recsys.TrainBaseModel(n_iter)
 
                     res = pd.DataFrame({'learning rate': learning_rate,
                                         'sgd step size': sgd_step_size,
                                         'latent factors': latent_factors,
                                         'iterations': n,
                                         'last RMSE': rmse_results[-2],
-                                        'RMSE list': [rmse_results]}, index=[0])
+                                        'RMSE list': [rmse_results],
+                                        'last MAE': mae_results[-2],
+                                        'MAE list': [mae_results]}, index=[0])
 
                     if not os.path.exists(os.path.join('results')):
                         os.makedirs(os.path.join('results'))
