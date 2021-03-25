@@ -3,16 +3,19 @@ import os
 import numpy as np
 import pandas as pd
 from scipy import sparse
-
+from collections import defaultdict
 
 class RecommenderSystem:
 
-    def __init__(self, data_path, learning_rate=0.05, sgd_step_size=0.05, latent_factors=20):
+    def __init__(self, data_path, learning_rate=0.05, sgd_step_size=0.05, latent_factors=20, advance=False):
 
         self.learning_rate = learning_rate
         self.sgd_step_size = sgd_step_size
         self.latent_factors = latent_factors
         self.data_path = data_path
+        self.advance = advance
+        if self.advance:
+            self.users2items = defaultdict(list)
 
     def Load(self):
         load_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), self.data_path)
@@ -22,6 +25,8 @@ class RecommenderSystem:
             ratings.extend(df['stars'].values)
             users.extend(df['user_id'].values)
             items.extend(df['business_id'].values)
+            if self.advance:
+                self.users2items.update(zip(df['user_id'].values, df['business_id'].values))
 
         users = np.array(users)
         items = np.array(items)
@@ -32,10 +37,10 @@ class RecommenderSystem:
         self.users2id = {user: idx for idx, user in enumerate(np.unique(users))}
         self.item2id = {item: idx for idx, item in enumerate(np.unique(items))}
         map_users = lambda x: self.users2id[x]
-        map_item = lambda x: self.item2id[x]
+        map_items = lambda x: self.item2id[x]
         # Convert ids to indices
         users = np.array([map_users(user_i) for user_i in users])
-        items = np.array([map_item(item_i) for item_i in items])
+        items = np.array([map_items(item_i) for item_i in items])
         # Create rating matrix as sparse matrix
         self.ratings_matrix = sparse.csr_matrix((ratings, (np.array(users), np.array(items))),
                                                 shape=(self.total_users, self.total_items))
@@ -51,15 +56,31 @@ class RecommenderSystem:
         rmse = []
         # shuffle entries and calculate SGD for each user/item
         sgd_indices = np.arange(len(self.idx_row))
-        for _ in range(n_iter):
+        for n in range(n_iter):
             np.random.shuffle(sgd_indices)
             self.sgd_step(sgd_indices)
-            predictons = self.calc_predictions()
-            rmse.append(self.calc_rmse(self.val_rating_matrix, predictons))
+            predictions = self.calc_predictions()
+            rmse.append(self.calc_rmse(self.val_rating_matrix, predictions))
+            # Stop rule
+            if len(rmse) > 1 and rmse[-1] > rmse[-2]:
+                break
 
-        # Save parameters and RMSE result to file
-        # Add stop rule
-        print(rmse)
+        return rmse, n
+
+    def TrainAdvancedModel(self, n_iter=20):
+        rmse = []
+        # shuffle entries and calculate SGD for each user/item
+        sgd_indices = np.arange(len(self.idx_row))
+        for n in range(n_iter):
+            np.random.shuffle(sgd_indices)
+            self.sgd_step(sgd_indices)
+            predictions = self.calc_predictions()
+            rmse.append(self.calc_rmse(self.val_rating_matrix, predictions))
+            # Stop rule
+            if len(rmse) > 1 and rmse[-1] > rmse[-2]:
+                break
+
+        return rmse, n
 
     def initialize_data(self):
         # Initialize bias vectors
@@ -72,6 +93,9 @@ class RecommenderSystem:
         self.idx_row, self.idx_col, self.rating_val = sparse.find(self.ratings_matrix)
         # split to train/validation
         self.train_ratings_matrix, self.val_rating_matrix = self.train_validation_split()
+        if self.advance:
+            self.implicit_matrix = np.random.rand(self.latent_factors, self.total_items)
+
 
     def train_validation_split(self, validation_size=0.2):
         validation_indices = np.random.choice(range(len(self.idx_row)), size=int(len(self.idx_row) * validation_size))
@@ -105,8 +129,13 @@ class RecommenderSystem:
                     e * self.items_matrix[:, i] - self.learning_rate * self.users_matrix[u, :])
 
     def calc_rating(self, user, item):
-        return self.avg_ratings + self.item_bias[item] + self.user_bias[user] + (
+        rating = self.avg_ratings + self.item_bias[item] + self.user_bias[user] + (
             np.dot(self.users_matrix[user, :], self.items_matrix[:, item]))
+        if rating < 1:
+            rating = 1
+        elif rating > 5:
+            rating = 5
+        return rating
 
     def calc_predictions(self):
         row_idx, col_idx = self.val_rating_matrix.nonzero()
