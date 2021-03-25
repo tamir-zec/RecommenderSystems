@@ -26,7 +26,8 @@ class RecommenderSystem:
             users.extend(df['user_id'].values)
             items.extend(df['business_id'].values)
             if self.advance:
-                self.users2items.update(zip(df['user_id'].values, df['business_id'].values))
+                for user, item in zip(df['user_id'].values, df['business_id'].values):
+                    self.users2items[user].append(item)
 
         users = np.array(users)
         items = np.array(items)
@@ -34,10 +35,11 @@ class RecommenderSystem:
         self.total_items = len(np.unique(items))
         self.total_ratings = len(ratings)
         self.avg_ratings = np.mean(ratings)
-        self.users2id = {user: idx for idx, user in enumerate(np.unique(users))}
-        self.item2id = {item: idx for idx, item in enumerate(np.unique(items))}
-        map_users = lambda x: self.users2id[x]
-        map_items = lambda x: self.item2id[x]
+        self.user2idx = {user: idx for idx, user in enumerate(np.unique(users))}
+        self.idx2user = {idx: user for user, idx in self.user2idx.items()}
+        self.item2idx = {item: idx for idx, item in enumerate(np.unique(items))}
+        map_users = lambda x: self.user2idx[x]
+        map_items = lambda x: self.item2idx[x]
         # Convert ids to indices
         users = np.array([map_users(user_i) for user_i in users])
         items = np.array([map_items(item_i) for item_i in items])
@@ -129,8 +131,32 @@ class RecommenderSystem:
                     e * self.items_matrix[:, i] - self.learning_rate * self.users_matrix[u, :])
 
     def calc_rating(self, user, item):
+        if self.advance:
+            return self.calc_rating_advanced(user, item)
+        else:
+            return self.calc_rating_base(user, item)
+
+    def calc_rating_base(self, user, item):
         rating = self.avg_ratings + self.item_bias[item] + self.user_bias[user] + (
             np.dot(self.users_matrix[user, :], self.items_matrix[:, item]))
+        if rating < 1:
+            rating = 1
+        elif rating > 5:
+            rating = 5
+        return rating
+
+    def calc_rating_advanced(self, user, item):
+        item_indices = []
+        user_name = self.idx2user[user]
+        for item_name in self.users2items[user_name]:
+            item_indices.append(self.item2idx[item_name])
+        N_u_implicit = len(item_indices)
+        # calculate rating by new formula - 15 from koren 2008
+        sum_imp_weight = np.sum(self.implicit_matrix[:, item_indices], axis=1)
+        implicit_weight = 1/np.sqrt(N_u_implicit) * sum_imp_weight
+        new_Pu = self.users_matrix[user, :] + implicit_weight
+        rating = self.avg_ratings + self.item_bias[item] + self.user_bias[user] + (
+            np.dot(new_Pu, self.items_matrix[:, item]))
         if rating < 1:
             rating = 1
         elif rating > 5:
