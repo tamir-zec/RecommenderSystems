@@ -5,17 +5,20 @@ import pandas as pd
 from scipy import sparse
 from collections import defaultdict
 
+
 class RecommenderSystem:
 
-    def __init__(self, data_path, learning_rate=0.05, sgd_step_size=0.05, latent_factors=20, advance=False):
+    def __init__(self, data_path, learning_rate=0.05, sgd_step_size=0.05, implicit_lrate=0.05, latent_factors=20,
+                 advanced=False):
 
         self.learning_rate = learning_rate
         self.sgd_step_size = sgd_step_size
         self.latent_factors = latent_factors
         self.data_path = data_path
-        self.advance = advance
-        if self.advance:
+        self.advanced = advanced
+        if self.advanced:
             self.users2items = defaultdict(list)
+            self.implicit_learning_rate = implicit_lrate
 
     def Load(self):
         load_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), self.data_path)
@@ -25,7 +28,7 @@ class RecommenderSystem:
             ratings.extend(df['stars'].values)
             users.extend(df['user_id'].values)
             items.extend(df['business_id'].values)
-            if self.advance:
+            if self.advanced:
                 for user, item in zip(df['user_id'].values, df['business_id'].values):
                     self.users2items[user].append(item)
 
@@ -95,9 +98,8 @@ class RecommenderSystem:
         self.idx_row, self.idx_col, self.rating_val = sparse.find(self.ratings_matrix)
         # split to train/validation
         self.train_ratings_matrix, self.val_rating_matrix = self.train_validation_split()
-        if self.advance:
+        if self.advanced:
             self.implicit_matrix = np.random.rand(self.latent_factors, self.total_items)
-
 
     def train_validation_split(self, validation_size=0.2):
         validation_indices = np.random.choice(range(len(self.idx_row)), size=int(len(self.idx_row) * validation_size))
@@ -114,6 +116,12 @@ class RecommenderSystem:
         return train_ratings_matrix, val_rating_matrix
 
     def sgd_step(self, sgd_indices):
+        if self.advanced:
+            return self.sgd_step_advanced(sgd_indices)
+        else:
+            return self.sgd_step_base(sgd_indices)
+
+    def sgd_step_base(self, sgd_indices):
         for idx in sgd_indices:
             u = self.idx_row[idx]
             i = self.idx_col[idx]
@@ -130,8 +138,39 @@ class RecommenderSystem:
             self.users_matrix[u, :] += self.sgd_step_size * (
                     e * self.items_matrix[:, i] - self.learning_rate * self.users_matrix[u, :])
 
+    def sgd_step_advanced(self, sgd_indices):
+        for idx in sgd_indices:
+            u = self.idx_row[idx]
+            i = self.idx_col[idx]
+            prediction = self.calc_rating(u, i)
+            # Error
+            e = (self.ratings_matrix[u, i] - prediction)
+            # Update biases
+            self.user_bias[u] += self.sgd_step_size * (e - self.learning_rate * self.user_bias[u])
+            self.item_bias[i] += self.sgd_step_size * (e - self.learning_rate * self.item_bias[i])
+            # Update latent factors - new rule with implicit data
+            self.items_matrix[:, i] += self.sgd_step_size * (
+                    e * (self.users_matrix[u, :] + self.get_implicit_weights_user(
+                u)) - self.implicit_learning_rate * self.items_matrix[:, i])
+            self.users_matrix[u, :] += self.sgd_step_size * (
+                    e * self.items_matrix[:, i] - self.implicit_learning_rate * self.users_matrix[u, :])
+            # update implicit matrix
+            self.update_implicit_matrix(u, i, e)
+
+    def update_implicit_matrix(self, user_idx, item_idx, error):
+        item_indices = []
+        user_name = self.idx2user[user_idx]
+        for item_name in self.users2items[user_name]:
+            item_indices.append(self.item2idx[item_name])
+        N = len(item_indices)
+        implicit_weight = 1 / np.sqrt(N)
+        implicit_total_update = np.transpose(np.tile(implicit_weight * self.items_matrix[:, item_idx], (N, 1)))
+        self.implicit_matrix[:, item_indices] += self.sgd_step_size * \
+                                                 (implicit_total_update - self.implicit_learning_rate *
+                                                  self.implicit_matrix[:, item_indices])
+
     def calc_rating(self, user, item):
-        if self.advance:
+        if self.advanced:
             return self.calc_rating_advanced(user, item)
         else:
             return self.calc_rating_base(user, item)
@@ -146,14 +185,7 @@ class RecommenderSystem:
         return rating
 
     def calc_rating_advanced(self, user, item):
-        item_indices = []
-        user_name = self.idx2user[user]
-        for item_name in self.users2items[user_name]:
-            item_indices.append(self.item2idx[item_name])
-        N_u_implicit = len(item_indices)
-        # calculate rating by new formula - 15 from koren 2008
-        sum_imp_weight = np.sum(self.implicit_matrix[:, item_indices], axis=1)
-        implicit_weight = 1/np.sqrt(N_u_implicit) * sum_imp_weight
+        implicit_weight = self.get_implicit_weights_user(user)
         new_Pu = self.users_matrix[user, :] + implicit_weight
         rating = self.avg_ratings + self.item_bias[item] + self.user_bias[user] + (
             np.dot(new_Pu, self.items_matrix[:, item]))
@@ -162,6 +194,16 @@ class RecommenderSystem:
         elif rating > 5:
             rating = 5
         return rating
+
+    def get_implicit_weights_user(self, user_idx):
+        item_indices = []
+        user_name = self.idx2user[user_idx]
+        for item_name in self.users2items[user_name]:
+            item_indices.append(self.item2idx[item_name])
+        N_u_implicit = len(item_indices)
+        # calculate rating by new formula - 15 from koren 2008
+        sum_imp_weight = np.sum(self.implicit_matrix[:, item_indices], axis=1)
+        return 1 / np.sqrt(N_u_implicit) * sum_imp_weight
 
     def calc_predictions(self):
         row_idx, col_idx = self.val_rating_matrix.nonzero()

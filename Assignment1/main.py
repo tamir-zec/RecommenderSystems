@@ -9,7 +9,7 @@ RANDOM_SEED = 4
 
 if __name__ == '__main__':
     np.random.seed(RANDOM_SEED)
-    recsys = RecommenderSystem('data/userTrainData.csv', advance=True)
+    recsys = RecommenderSystem('data/userTrainData.csv', advanced=True)
     recsys.Load()
     for learning_rate in [0.075, 0.05, 0.025, 0.01, 0.005]:
         for sgd_step_size in [0.075, 0.05, 0.025, 0.01, 0.005]:
