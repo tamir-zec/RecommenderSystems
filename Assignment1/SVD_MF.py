@@ -173,7 +173,7 @@ class RecommenderSystem:
             item_indices.append(self.item2idx[item_name])
         N = len(item_indices)
         implicit_weight = 1 / np.sqrt(N)
-        implicit_total_update = np.transpose(np.tile(implicit_weight * self.items_matrix[:, item_idx], (N, 1)))
+        implicit_total_update = np.transpose(np.tile(error * implicit_weight * self.items_matrix[:, item_idx], (N, 1)))
         self.implicit_matrix[:, item_indices] += self.sgd_step_size * \
                                                  (implicit_total_update - self.implicit_learning_rate *
                                                   self.implicit_matrix[:, item_indices])
