@@ -57,8 +57,14 @@ class RecommenderSystem:
         result = (ratings - predictions).power(2)
         return np.square(result.sum() / N)
 
+    def calc_mae(self, ratings, predictions):
+        N = len(predictions.nonzero()[0])
+        result = np.abs(ratings - predictions)
+        return result.sum() / N
+
     def TrainBaseModel(self, n_iter=20):
         rmse = []
+        mae = []
         # shuffle entries and calculate SGD for each user/item
         sgd_indices = np.arange(len(self.idx_row))
         for n in range(n_iter):
@@ -66,14 +72,16 @@ class RecommenderSystem:
             self.sgd_step(sgd_indices)
             predictions = self.calc_predictions()
             rmse.append(self.calc_rmse(self.val_rating_matrix, predictions))
+            mae.append(self.calc_mae(self.val_rating_matrix, predictions))
             # Stop rule
-            if len(rmse) > 1 and rmse[-1] > rmse[-2]:
+            if len(rmse) > 1 and (rmse[-1] > rmse[-2] or mae[-1] > mae[-2]):
                 break
 
-        return rmse, n
+        return rmse, mae, n
 
     def TrainAdvancedModel(self, n_iter=20):
         rmse = []
+        mae = []
         # shuffle entries and calculate SGD for each user/item
         sgd_indices = np.arange(len(self.idx_row))
         for n in range(n_iter):
@@ -81,11 +89,12 @@ class RecommenderSystem:
             self.sgd_step(sgd_indices)
             predictions = self.calc_predictions()
             rmse.append(self.calc_rmse(self.val_rating_matrix, predictions))
+            mae.append(self.calc_rmse(self.val_rating_matrix, predictions))
             # Stop rule
-            if len(rmse) > 1 and rmse[-1] > rmse[-2]:
+            if len(rmse) > 1 and (rmse[-1] > rmse[-2] or mae[-1] > mae[-2]):
                 break
 
-        return rmse, n
+        return rmse, mae, n
 
     def initialize_data(self):
         # Initialize bias vectors
