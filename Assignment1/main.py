@@ -11,10 +11,10 @@ if __name__ == '__main__':
     np.random.seed(RANDOM_SEED)
     recsys = RecommenderSystem('data/userTrainData.csv', advanced=True)
     recsys.Load()
-    for learning_rate in [0.05, 0.03, 0.025, 0.01, 0.005]:
-        for sgd_step_size in [0.05, 0.03, 0.025]:
+    for learning_rate in [0.075, 0.05, 0.025, 0.01, 0.005]:
+        for sgd_step_size in [0.075, 0.05, 0.025, 0.01, 0.005]:
             for latent_factors in [20, 50, 100]:
-                for n_iter in [100]:
+                for n_iter in [50]:
                     recsys.learning_rate = learning_rate
                     recsys.sgd_step_size = sgd_step_size
                     recsys.latent_factors = latent_factors
@@ -34,6 +34,8 @@ if __name__ == '__main__':
                     if not os.path.exists(os.path.join('results')):
                         os.makedirs(os.path.join('results'))
                     save_result_path = os.path.join('results', 'basic_model_results.csv')
+                    if recsys.advanced:
+                        save_result_path = os.path.join('results', 'advanced_model_results.csv')
                     if os.path.exists(save_result_path):
                         res.to_csv(save_result_path, header=False, mode='a', index=False)
                     else:
