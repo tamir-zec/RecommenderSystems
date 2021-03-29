@@ -1,9 +1,9 @@
 import os
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
 from scipy import sparse
-from collections import defaultdict
 
 
 class RecommenderSystem:
@@ -124,12 +124,6 @@ class RecommenderSystem:
 
         return train_ratings_matrix, val_rating_matrix
 
-    def sgd_step(self, sgd_indices):
-        if self.advanced:
-            return self.sgd_step_advanced(sgd_indices)
-        else:
-            return self.sgd_step_base(sgd_indices)
-
     def sgd_step_base(self, sgd_indices):
         for idx in sgd_indices:
             u = self.idx_row[idx]
@@ -140,7 +134,6 @@ class RecommenderSystem:
             # Update biases
             self.user_bias[u] += self.sgd_step_size * (e - self.learning_rate * self.user_bias[u])
             self.item_bias[i] += self.sgd_step_size * (e - self.learning_rate * self.item_bias[i])
-
             # Update latent factors
             self.items_matrix[:, i] += self.sgd_step_size * (
                     e * self.users_matrix[u, :] - self.learning_rate * self.items_matrix[:, i])
@@ -158,13 +151,19 @@ class RecommenderSystem:
             self.user_bias[u] += self.sgd_step_size * (e - self.learning_rate * self.user_bias[u])
             self.item_bias[i] += self.sgd_step_size * (e - self.learning_rate * self.item_bias[i])
             # Update latent factors - new rule with implicit data
-            self.items_matrix[:, i] += self.sgd_step_size * (
-                    e * (self.users_matrix[u, :] + self.get_implicit_weights_user(
+            self.items_matrix[:, i] += self.sgd_step_size * (e * (
+                    self.users_matrix[u, :] + self.get_implicit_weights_user(
                 u)) - self.implicit_learning_rate * self.items_matrix[:, i])
             self.users_matrix[u, :] += self.sgd_step_size * (
-                    e * self.items_matrix[:, i] - self.implicit_learning_rate * self.users_matrix[u, :])
-            # update implicit matrix
+                        e * self.items_matrix[:, i] - self.implicit_learning_rate * self.users_matrix[u, :])
+            # Update implicit matrix
             self.update_implicit_matrix(u, i, e)
+
+    def sgd_step(self, sgd_indices):
+        if self.advanced:
+            return self.sgd_step_advanced(sgd_indices)
+        else:
+            return self.sgd_step_base(sgd_indices)
 
     def update_implicit_matrix(self, user_idx, item_idx, error):
         item_indices = []
@@ -174,15 +173,8 @@ class RecommenderSystem:
         N = len(item_indices)
         implicit_weight = 1 / np.sqrt(N)
         implicit_total_update = np.transpose(np.tile(error * implicit_weight * self.items_matrix[:, item_idx], (N, 1)))
-        self.implicit_matrix[:, item_indices] += self.sgd_step_size * \
-                                                 (implicit_total_update - self.implicit_learning_rate *
-                                                  self.implicit_matrix[:, item_indices])
-
-    def calc_rating(self, user, item):
-        if self.advanced:
-            return self.calc_rating_advanced(user, item)
-        else:
-            return self.calc_rating_base(user, item)
+        self.implicit_matrix[:, item_indices] += self.sgd_step_size * (
+                implicit_total_update - self.implicit_learning_rate * self.implicit_matrix[:, item_indices])
 
     def calc_rating_base(self, user, item):
         rating = self.avg_ratings + self.item_bias[item] + self.user_bias[user] + (
@@ -204,13 +196,19 @@ class RecommenderSystem:
             rating = 5
         return rating
 
+    def calc_rating(self, user, item):
+        if self.advanced:
+            return self.calc_rating_advanced(user, item)
+        else:
+            return self.calc_rating_base(user, item)
+
     def get_implicit_weights_user(self, user_idx):
         item_indices = []
         user_name = self.idx2user[user_idx]
         for item_name in self.users2items[user_name]:
             item_indices.append(self.item2idx[item_name])
         N_u_implicit = len(item_indices)
-        # calculate rating by new formula - 15 from koren 2008
+        # Calculate rating by new formula - 15 from koren 2008
         sum_imp_weight = np.sum(self.implicit_matrix[:, item_indices], axis=1)
         return 1 / np.sqrt(N_u_implicit) * sum_imp_weight
 
