@@ -79,36 +79,40 @@ def calc_user_embedding():
 
 def build_tfidf_w2v_vectors(vector_dim=200):
     model = load_model()
-    # Reading each user-item review
+    # Read each user-item review
     df = pd.read_csv('data/clean_reviews.csv', names=['user_id', 'business_id', 'clean_review'])
+    non_english_reviews = df[df['clean_review'].isnull()]
+    non_english_reviews[['user_id', 'business_id']].to_csv('data/non_english_reviews.csv', index=False)
+    df = df[df['clean_review'].isnull() == False]
     # Building TFIDF model and calculate TFIDF score
     tfidf = TfidfVectorizer(analyzer='word')
     tfidf.fit(df['clean_review'])
-    # Getting the words from the TF-IDF model
-    tfidf_list = dict(zip(tfidf.get_feature_names(), list(tfidf.idf_)))
+    # Get the words from the TF-IDF model
+    tfidf_dict = dict(zip(tfidf.get_feature_names(), list(tfidf.idf_)))
     tfidf_feature = tfidf.get_feature_names()
-    tfidf_vectors = []
+    embedding_vectors = []
     for line in df['clean_review']:
-        sent_vec = np.zeros(vector_dim)
-        # num of words with a valid vector in the book description
+        review_vec = np.zeros(vector_dim)
+        # Num of words with a valid vector
         weight_sum = 0
-        # for each word in the book description
         line_split = line.split()
         for word in line_split:
-            if word in model.wv.vocab and word in tfidf_feature:
-                vec = model.wv[word]
-                tf_idf = tfidf_list[word] * (line_split.count(word) / len(line_split))
-                sent_vec += (vec * tf_idf)
+            if word in model.vocab and word in tfidf_feature:
+                w2v_vec = model[word]
+                tf_idf = tfidf_dict[word] * (line_split.count(word) / len(line_split))
+                review_vec += (w2v_vec * tf_idf)
                 weight_sum += tf_idf
-        if weight_sum != 0:
-            sent_vec /= weight_sum
-        tfidf_vectors.append(sent_vec)
 
-    df['tfidf_vectors'] = tfidf_vectors
+        if weight_sum != 0:
+            review_vec /= weight_sum
+        embedding_vectors.append(review_vec)
+
+    df['embedding_vectors'] = embedding_vectors
+    df[['user_id', 'business_id', 'embedding_vectors']].to_csv('data/tfidf_vectors.tsv', sep='\t', index=False)
 
 
 if __name__ == '__main__':
     load_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data/userTrainData.csv')
-    clean_review_text(load_directory)
-    train_model('data/clean_reviews.csv')
-    # build_tfidf_w2v_vectors()
+    # clean_review_text(load_directory)
+    # train_model('data/clean_reviews.csv')
+    build_tfidf_w2v_vectors()

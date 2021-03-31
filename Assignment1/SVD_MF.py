@@ -93,7 +93,7 @@ class RecommenderSystem:
             self.sgd_step(sgd_indices)
             predictions = self.calc_predictions()
             rmse.append(self.calc_rmse(self.val_rating_matrix, predictions))
-            mae.append(self.calc_rmse(self.val_rating_matrix, predictions))
+            mae.append(self.calc_mae(self.val_rating_matrix, predictions))
             # Stop rule
             if len(rmse) > 1 and (rmse[-1] > rmse[-2] or mae[-1] > mae[-2]):
                 break
@@ -246,3 +246,7 @@ class RecommenderSystem:
 
         predictions = sparse.csr_matrix((data, (row_idx, col_idx)), shape=(self.total_users, self.total_items))
         return predictions
+
+    def calc_test_preictions(self):
+        # todo: handle missing users/items in the train data
+        pass
