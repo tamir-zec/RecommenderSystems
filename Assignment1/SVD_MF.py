@@ -190,12 +190,14 @@ class RecommenderSystem:
     def calc_rating_advanced(self, user, item):
         implicit_weight = self.get_implicit_weights_user(user)
         new_Pu = self.users_matrix[user, :] + implicit_weight
-        rating = self.avg_ratings + self.item_bias[item] + self.user_bias[user] + (
-            np.dot(new_Pu, self.items_matrix[:, item]))
-        if rating < 1:
-            rating = 1
-        elif rating > 5:
-            rating = 5
+        factor_product = np.multiply(new_Pu, self.items_matrix[:, item])
+        rating = self.avg_ratings + self.item_bias[item] + self.user_bias[user]
+        for factor_mul in factor_product:
+            rating = rating + factor_mul
+            if rating < 1:
+                rating = 1
+            elif rating > 5:
+                rating = 5
         return rating
 
     def calc_rating(self, user, item):
