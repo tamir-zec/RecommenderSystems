@@ -10,7 +10,7 @@ class RecommenderSystem:
 
     def __init__(self, data_path, learning_rate=0.05, sgd_step_size=0.05, implicit_lrate=0.05, latent_factors=20,
                  advanced=False):
-
+        self.rand_const = 0.2
         self.learning_rate = learning_rate
         self.sgd_step_size = sgd_step_size
         self.latent_factors = latent_factors
@@ -98,11 +98,11 @@ class RecommenderSystem:
 
     def initialize_data(self):
         # Initialize bias vectors
-        self.user_bias = np.random.random(self.total_users)
-        self.item_bias = np.random.random(self.total_items)
+        self.user_bias = self.rand_const*np.random.random(self.total_users)
+        self.item_bias = self.rand_const*np.random.random(self.total_items)
         # initialize latent factors matrices
-        self.users_matrix = np.random.rand(self.total_users, self.latent_factors)
-        self.items_matrix = np.random.rand(self.latent_factors, self.total_items)
+        self.users_matrix = self.rand_const*np.random.rand(self.total_users, self.latent_factors)
+        self.items_matrix = self.rand_const*np.random.rand(self.latent_factors, self.total_items)
         # Keep the indices and values of the non-zero entries in the sparse matrix
         self.idx_row, self.idx_col, self.rating_val = sparse.find(self.ratings_matrix)
         # split to train/validation
@@ -177,12 +177,14 @@ class RecommenderSystem:
                 implicit_total_update - self.implicit_learning_rate * self.implicit_matrix[:, item_indices])
 
     def calc_rating_base(self, user, item):
-        rating = self.avg_ratings + self.item_bias[item] + self.user_bias[user] + (
-            np.dot(self.users_matrix[user, :], self.items_matrix[:, item]))
-        if rating < 1:
-            rating = 1
-        elif rating > 5:
-            rating = 5
+        factor_product = np.multiply(self.users_matrix[user, :], self.items_matrix[:, item])
+        rating = self.avg_ratings + self.item_bias[item] + self.user_bias[user]
+        for factor_mul in factor_product:
+            rating = rating + factor_mul
+            if rating < 1:
+                rating = 1
+            elif rating > 5:
+                rating = 5
         return rating
 
     def calc_rating_advanced(self, user, item):
