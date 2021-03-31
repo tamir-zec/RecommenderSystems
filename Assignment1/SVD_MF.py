@@ -1,4 +1,5 @@
 import os
+
 from collections import defaultdict
 
 import numpy as np
@@ -9,16 +10,19 @@ from scipy import sparse
 class RecommenderSystem:
 
     def __init__(self, data_path, learning_rate=0.05, sgd_step_size=0.05, implicit_lrate=0.05, latent_factors=20,
-                 rand_const=0.2, advanced=False):
+                 rand_const=0.2, advanced=False, content=False):
         self.learning_rate = learning_rate
         self.sgd_step_size = sgd_step_size
         self.latent_factors = latent_factors
         self.rand_const = rand_const
         self.data_path = data_path
         self.advanced = advanced
+        self.content = content
         if self.advanced:
             self.users2items = defaultdict(list)
             self.implicit_learning_rate = implicit_lrate
+        if self.content:
+            self.items_reviews = {}
 
     def Load(self):
         load_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), self.data_path)
@@ -55,7 +59,7 @@ class RecommenderSystem:
     def calc_rmse(self, ratings, predictions):
         N = len(predictions.nonzero()[0])
         result = (ratings - predictions).power(2)
-        return np.square(result.sum() / N)
+        return np.sqrt(result.sum() / N)
 
     def calc_mae(self, ratings, predictions):
         N = len(predictions.nonzero()[0])
@@ -96,6 +100,21 @@ class RecommenderSystem:
 
         return rmse, mae, n
 
+    def TrainContentModel(self, n_iter=20):
+        # todo: implement
+        pass
+
+    def PredictRating(self):
+        # todo: implement
+        self.calc_predictions()
+
+    def TrainHybridModel(self):
+        # todo: implement
+        self.TrainBaseModel()
+        self.TrainAdvancedModel()
+        self.TrainContentModel()
+        pass
+
     def initialize_data(self):
         # Initialize bias vectors
         self.user_bias = self.rand_const * np.random.random(self.total_users)
@@ -108,7 +127,7 @@ class RecommenderSystem:
         # split to train/validation
         self.train_ratings_matrix, self.val_rating_matrix = self.train_validation_split()
         if self.advanced:
-            self.implicit_matrix = np.random.rand(self.latent_factors, self.total_items)
+            self.implicit_matrix = self.rand_const * np.random.rand(self.latent_factors, self.total_items)
 
     def train_validation_split(self, validation_size=0.2):
         validation_indices = np.random.choice(range(len(self.idx_row)), size=int(len(self.idx_row) * validation_size))
@@ -203,6 +222,8 @@ class RecommenderSystem:
     def calc_rating(self, user, item):
         if self.advanced:
             return self.calc_rating_advanced(user, item)
+        elif self.content:
+            return self.calc_rating_content(user, item)
         else:
             return self.calc_rating_base(user, item)
 
