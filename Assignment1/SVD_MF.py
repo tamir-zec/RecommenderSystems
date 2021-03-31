@@ -98,11 +98,11 @@ class RecommenderSystem:
 
     def initialize_data(self):
         # Initialize bias vectors
-        self.user_bias = self.rand_const*np.random.random(self.total_users)
-        self.item_bias = self.rand_const*np.random.random(self.total_items)
+        self.user_bias = self.rand_const * np.random.random(self.total_users)
+        self.item_bias = self.rand_const * np.random.random(self.total_items)
         # initialize latent factors matrices
-        self.users_matrix = self.rand_const*np.random.rand(self.total_users, self.latent_factors)
-        self.items_matrix = self.rand_const*np.random.rand(self.latent_factors, self.total_items)
+        self.users_matrix = self.rand_const * np.random.rand(self.total_users, self.latent_factors)
+        self.items_matrix = self.rand_const * np.random.rand(self.latent_factors, self.total_items)
         # Keep the indices and values of the non-zero entries in the sparse matrix
         self.idx_row, self.idx_col, self.rating_val = sparse.find(self.ratings_matrix)
         # split to train/validation
@@ -155,7 +155,7 @@ class RecommenderSystem:
                     self.users_matrix[u, :] + self.get_implicit_weights_user(
                 u)) - self.implicit_learning_rate * self.items_matrix[:, i])
             self.users_matrix[u, :] += self.sgd_step_size * (
-                        e * self.items_matrix[:, i] - self.implicit_learning_rate * self.users_matrix[u, :])
+                    e * self.items_matrix[:, i] - self.implicit_learning_rate * self.users_matrix[u, :])
             # Update implicit matrix
             self.update_implicit_matrix(u, i, e)
 
