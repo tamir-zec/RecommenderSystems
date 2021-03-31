@@ -11,10 +11,10 @@ if __name__ == '__main__':
     np.random.seed(RANDOM_SEED)
     recsys = RecommenderSystem('data/userTrainData.csv', advanced=True)
     recsys.Load()
-    for learning_rate in [0.05, 0.025, 0.01, 0.005]:
-        for sgd_step_size in [0.05, 0.025, 0.01, 0.005]:
+    for learning_rate in [0.075, 0.05, 0.025, 0.01, 0.005]:
+        for sgd_step_size in [0.075, 0.05, 0.025, 0.01, 0.005]:
             for latent_factors, rand_const in [(20, 0.2), (50, 0.1), (100, 0.05)]:
-                for n_iter in [100]:
+                for n_iter in [50]:
                     recsys.learning_rate = learning_rate
                     recsys.sgd_step_size = sgd_step_size
                     recsys.latent_factors = latent_factors
@@ -25,6 +25,7 @@ if __name__ == '__main__':
                     else:
                         rmse_results, mae_results, n = recsys.TrainBaseModel(n_iter)
 
+                    print(f'{n} iterations: RMSE {rmse_results[-2]}, MAE {mae_results[-2]}')
                     res = pd.DataFrame({'learning rate': learning_rate,
                                         'sgd step size': sgd_step_size,
                                         'latent factors': latent_factors,
