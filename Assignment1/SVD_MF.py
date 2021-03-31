@@ -9,11 +9,11 @@ from scipy import sparse
 class RecommenderSystem:
 
     def __init__(self, data_path, learning_rate=0.05, sgd_step_size=0.05, implicit_lrate=0.05, latent_factors=20,
-                 advanced=False):
-        self.rand_const = 0.2
+                 rand_const=0.2, advanced=False):
         self.learning_rate = learning_rate
         self.sgd_step_size = sgd_step_size
         self.latent_factors = latent_factors
+        self.rand_const = rand_const
         self.data_path = data_path
         self.advanced = advanced
         if self.advanced:
