@@ -10,6 +10,8 @@ from nltk.tokenize import word_tokenize
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 stopwords_list = stopwords.words("english")
+EMBEDDING_DIM = 200
+MAX_SCORE = 5
 
 
 class Sentences(object):
@@ -99,15 +101,40 @@ def create_item_embedding():
 def create_user_embedding():
     users = pd.read_csv('data/yelp_user.csv', usecols=['user_id', 'average_stars'])
     reviews = pd.read_csv('data/userTrainData.csv', usecols=['user_id', 'business_id', 'stars'])
-    users2business = reviews.groupby('user_id').apply(lambda gb: (gb['business_id'].tolist(), gb['stars'].tolist()))
-    users2business = users2business.reset_index().rename(columns={0:'business'})
-    # users2business['business'] = users2business['business'].apply(lambda x: for b, s in x)
+    users2business = reviews.groupby('user_id').apply(
+        lambda gb: {b: s for b, s in zip(gb['business_id'].tolist(), gb['stars'].tolist())})
+    users2business = users2business.reset_index().rename(columns={0: 'business'})
+    users2business = pd.merge(users2business, users, on='user_id', how='left')
+
     # Calculate weighted average of the rated items by the user. The weights are the item rating - abg rating of the user
+    items_embedding = pd.read_csv('data/items_embedding.tsv', sep='\t')
+    items_embedding['embedding_vectors'] = items_embedding['embedding_vectors'].apply(
+        lambda x: np.fromstring(x.replace('\n', '').rstrip(']').lstrip('['), sep=' '))
+    items_embedding = items_embedding.set_index('business_id')['embedding_vectors'].todict()
+    user_vectors = {}
+    for _, row in users2business.iterrows():
+        user_id = row['user_id']
+        businesses_scores = row['business']
+        user_average = row['average_stars']
+        user_dict = {}
+        for key, value in businesses_scores:
+            user_dict[key]['embedding_vector'] = items_embedding[key]
+            user_dict[key]['business_score'] = value
+
+        user_vectors[user_id] = calc_user_vector(user_dict, user_average)
 
     # Calculate the similarity between the user and the other item
 
     # distance.cosine computes distance, and not similarity. So need to subtract the value from 1 to get the similarity.
     # cosine_similarity = 1 - distance.cosine(vec1, vec2)
+
+
+def calc_user_vector(user_dict, user_average):
+    user_vector = np.zeros(EMBEDDING_DIM, 1)
+    for business in user_dict.keys():
+        item_offset = (user_dict[business]['business_score'] - user_average) / MAX_SCORE
+        user_vector += item_offset * user_dict[business]['embedding_vector']
+    return user_vector
 
 
 def build_tfidf_w2v_vectors(vector_dim=200):
