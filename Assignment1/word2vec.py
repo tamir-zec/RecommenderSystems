@@ -135,10 +135,12 @@ def build_tfidf_w2v_vectors(vector_dim=200):
             line_split = line.split()
             w2v_vecs = model[line_split]
             tf_idf_scores = []
-            for word in line_split:
+            for i, word in enumerate(line_split):
                 if word in model.vocab and word in tfidf_feature:
                     tf_idf = tfidf_dict[word] * (line_split.count(word) / len(line_split))
                     tf_idf_scores.append(tf_idf)
+                else:
+                    w2v_vecs = np.delete(w2v_vecs, (i), axis=0)
 
             review_vec += np.sum(np.multiply(w2v_vecs, np.array(tf_idf_scores).reshape(len(tf_idf_scores), 1)), axis=0)
             weight_sum += sum(tf_idf_scores)
@@ -159,6 +161,6 @@ if __name__ == '__main__':
     load_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data/userTrainData.csv')
     # clean_review_text(load_directory)
     # train_model('data/clean_reviews.csv')
-    # build_tfidf_w2v_vectors()
+    build_tfidf_w2v_vectors()
     # create_item_embedding()
-    create_user_embedding()
+    # create_user_embedding()
