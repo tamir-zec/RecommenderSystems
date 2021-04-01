@@ -66,7 +66,7 @@ def train_model(dirname):
 
 def load_model():
     model_path = os.path.join('w2v_model', 'w2v_yelp')
-    model = gensim.models.KeyedVectors.load_word2vec_format(fname=model_path, binary=True, limit=700000)
+    model = gensim.models.KeyedVectors.load_word2vec_format(fname=model_path, binary=True)  # , limit=700000)
     return model
 
 
@@ -96,9 +96,9 @@ def create_item_embedding():
     items.to_csv('data/items_embedding.tsv', sep='\t')
 
 
-
 def create_user_embedding():
-    users = pd.read_csv('data/yelp_users.csv', usecols=['business_id', 'stars'])
+    users = pd.read_csv('data/yelp_user.csv', usecols=['user_id', 'average_stars'])
+    reviews = pd.read_csv('data/userTrainData', usecols=['user_id', 'business_id', '')
     # Calculate weighted average of the rated items by the user. The weights are the item rating - abg rating of the user
 
     # Calculate the similarity between the user and the other item
