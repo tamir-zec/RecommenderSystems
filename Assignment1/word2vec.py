@@ -98,7 +98,8 @@ def create_item_embedding():
 
 def create_user_embedding():
     users = pd.read_csv('data/yelp_user.csv', usecols=['user_id', 'average_stars'])
-    # reviews = pd.read_csv('data/userTrainData', usecols=['user_id', 'business_id', '')
+    reviews = pd.read_csv('data/userTrainData', usecols=['user_id', 'business_id', 'stars'])
+    users2business = reviews.groupby('user_id').apply(lambda gb: (gb['business_id'].tolist(), gb['stars'].tolist()))
     # Calculate weighted average of the rated items by the user. The weights are the item rating - abg rating of the user
 
     # Calculate the similarity between the user and the other item
@@ -115,7 +116,7 @@ def build_tfidf_w2v_vectors(vector_dim=200):
     # non_english_reviews[['user_id', 'business_id']].to_csv('data/non_english_reviews.csv', index=False)
     df = df[df['clean_review'].isnull() == False]
     # Building TFIDF model and calculate TFIDF score
-    tfidf = TfidfVectorizer(analyzer='word')
+    tfidf = TfidfVectorizer(analyzer='word', min_df=0)
     tfidf.fit(df['clean_review'])
     # Get the words from the TF-IDF model
     tfidf_dict = dict(zip(tfidf.get_feature_names(), list(tfidf.idf_)))
@@ -158,5 +159,6 @@ if __name__ == '__main__':
     load_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data/userTrainData.csv')
     # clean_review_text(load_directory)
     # train_model('data/clean_reviews.csv')
-    build_tfidf_w2v_vectors()
+    # build_tfidf_w2v_vectors()
     # create_item_embedding()
+    create_user_embedding()
