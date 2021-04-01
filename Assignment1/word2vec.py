@@ -98,8 +98,10 @@ def create_item_embedding():
 
 def create_user_embedding():
     users = pd.read_csv('data/yelp_user.csv', usecols=['user_id', 'average_stars'])
-    reviews = pd.read_csv('data/userTrainData', usecols=['user_id', 'business_id', 'stars'])
+    reviews = pd.read_csv('data/userTrainData.csv', usecols=['user_id', 'business_id', 'stars'])
     users2business = reviews.groupby('user_id').apply(lambda gb: (gb['business_id'].tolist(), gb['stars'].tolist()))
+    users2business = users2business.reset_index().rename(columns={0:'business'})
+    users2business['business'] = users2business['business'].apply(lambda x: for b, s in x)
     # Calculate weighted average of the rated items by the user. The weights are the item rating - abg rating of the user
 
     # Calculate the similarity between the user and the other item
@@ -135,12 +137,16 @@ def build_tfidf_w2v_vectors(vector_dim=200):
             line_split = line.split()
             w2v_vecs = model[line_split]
             tf_idf_scores = []
+            delete_indices = []
             for i, word in enumerate(line_split):
                 if word in model.vocab and word in tfidf_feature:
                     tf_idf = tfidf_dict[word] * (line_split.count(word) / len(line_split))
                     tf_idf_scores.append(tf_idf)
                 else:
-                    w2v_vecs = np.delete(w2v_vecs, (i), axis=0)
+                    delete_indices.append(i)
+
+            # Remove words that don't exists in the TFIDF vectorizer
+            w2v_vecs = np.delete(w2v_vecs, delete_indices, axis=0)
 
             review_vec += np.sum(np.multiply(w2v_vecs, np.array(tf_idf_scores).reshape(len(tf_idf_scores), 1)), axis=0)
             weight_sum += sum(tf_idf_scores)
