@@ -101,7 +101,7 @@ def create_user_embedding():
     reviews = pd.read_csv('data/userTrainData.csv', usecols=['user_id', 'business_id', 'stars'])
     users2business = reviews.groupby('user_id').apply(lambda gb: (gb['business_id'].tolist(), gb['stars'].tolist()))
     users2business = users2business.reset_index().rename(columns={0:'business'})
-    users2business['business'] = users2business['business'].apply(lambda x: for b, s in x)
+    # users2business['business'] = users2business['business'].apply(lambda x: for b, s in x)
     # Calculate weighted average of the rated items by the user. The weights are the item rating - abg rating of the user
 
     # Calculate the similarity between the user and the other item
