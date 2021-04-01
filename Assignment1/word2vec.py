@@ -2,6 +2,7 @@ import os
 import re
 
 import gensim
+import math
 import numpy as np
 import pandas as pd
 from nltk.corpus import stopwords
@@ -90,25 +91,36 @@ def build_tfidf_w2v_vectors(vector_dim=200):
     # Get the words from the TF-IDF model
     tfidf_dict = dict(zip(tfidf.get_feature_names(), list(tfidf.idf_)))
     tfidf_feature = tfidf.get_feature_names()
-    embedding_vectors = []
-    for line in df['clean_review']:
-        review_vec = np.zeros(vector_dim)
-        # Num of words with a valid vector
-        weight_sum = 0
-        line_split = line.split()
-        for word in line_split:
-            if word in model.vocab and word in tfidf_feature:
-                w2v_vec = model[word]
-                tf_idf = tfidf_dict[word] * (line_split.count(word) / len(line_split))
-                review_vec += (w2v_vec * tf_idf)
-                weight_sum += tf_idf
 
-        if weight_sum != 0:
-            review_vec /= weight_sum
-        embedding_vectors.append(review_vec)
+    df_length = len(df)
+    batch_size = 1000
+    num_batch = math.ceil(df_length / batch_size)
+    # Get batch of sentence and create a text file
+    for chunk in np.array_split(df, num_batch):
+        embedding_vectors = []
+        for line in chunk['clean_review']:
+            review_vec = np.zeros(vector_dim)
+            # Num of words with a valid vector
+            weight_sum = 0
+            line_split = line.split()
+            for word in line_split:
+                if word in model.vocab and word in tfidf_feature:
+                    w2v_vec = model[word]
+                    tf_idf = tfidf_dict[word] * (line_split.count(word) / len(line_split))
+                    review_vec += (w2v_vec * tf_idf)
+                    weight_sum += tf_idf
 
-    df['embedding_vectors'] = embedding_vectors
-    df[['user_id', 'business_id', 'embedding_vectors']].to_csv('data/tfidf_vectors.tsv', sep='\t', index=False)
+            if weight_sum != 0:
+                review_vec /= weight_sum
+            embedding_vectors.append(review_vec)
+
+        chunk['embedding_vectors'] = embedding_vectors
+        if os.path.exists('data/tfidf_vectors.tsv'):
+            chunk[['user_id', 'business_id', 'embedding_vectors']].to_csv('data/tfidf_vectors.tsv', sep='\t',
+                                                                          index=False, header=False, mode='a')
+        else:
+            chunk[['user_id', 'business_id', 'embedding_vectors']].to_csv('data/tfidf_vectors.tsv', sep='\t',
+                                                                          index=False)
 
 
 if __name__ == '__main__':
