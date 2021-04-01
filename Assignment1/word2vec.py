@@ -52,13 +52,13 @@ def train_model(dirname):
         model = gensim.models.Word2Vec(sentences=sentences, size=200, window=8, min_count=1, workers=10)
         model.train(sentences=sentences, total_examples=model.corpus_count, epochs=2)
         # Normalized vectors
-        model.wv.init_sims(replace=True)
+        model.init_sims(replace=True)
         # Save model to directory
         print("train_model: Save model to directory")
         model_path = os.path.join('w2v_model')
         if not os.path.exists(model_path):
             os.makedirs(model_path)
-        model.wv.save_word2vec_format(os.path.join(model_path, 'w2v_yelp'), binary=True)
+        model.save_word2vec_format(os.path.join(model_path, 'w2v_yelp'), binary=True)
 
     except Exception as e:
         print("train_model: Exception: " + str(e))
@@ -93,7 +93,7 @@ def build_tfidf_w2v_vectors(vector_dim=200):
     tfidf_feature = tfidf.get_feature_names()
 
     df_length = len(df)
-    batch_size = 1000
+    batch_size = 10000
     num_batch = math.ceil(df_length / batch_size)
     # Get batch of sentence and create a text file
     for chunk in np.array_split(df, num_batch):
