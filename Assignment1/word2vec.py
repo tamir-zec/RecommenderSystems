@@ -70,9 +70,9 @@ def load_model():
     return model
 
 
-def create_item_embedding(vector_dim=200):
+def create_item_embedding():
     items_dict = {}
-    for chunk in pd.read_csv('data/tfidf_vectors.tsv', chunksize=10000, sep='\t', skiprows=1):
+    for chunk in pd.read_csv('data/tfidf_vectors.tsv', chunksize=100000, sep='\t', skiprows=1):
         for idx, line in chunk.iterrows():
             business_id = line[1]
             embedding = np.fromstring(line[2].replace('\n', '').rstrip(']').lstrip('['), sep=' ')
@@ -93,13 +93,18 @@ def create_item_embedding(vector_dim=200):
     items = pd.merge(items, embeddings, on='business_id', how='left')
     if len(items[items['embedding_vectors'].isnull()]) > 0:
         print('There are ' + str(len(items[items['embedding_vectors'].isnull()])) + ' businesses without reviews')
+    items.to_csv('data/items_embedding.tsv', sep='\t')
+
+
+
+def create_user_embedding():
+    users = pd.read_csv('data/yelp_users.csv', usecols=['business_id', 'stars'])
+    # Calculate weighted average of the rated items by the user. The weights are the item rating - abg rating of the user
+
+    # Calculate the similarity between the user and the other item
 
     # distance.cosine computes distance, and not similarity. So need to subtract the value from 1 to get the similarity.
     # cosine_similarity = 1 - distance.cosine(vec1, vec2)
-
-
-def calc_user_embedding():
-    pass
 
 
 def build_tfidf_w2v_vectors(vector_dim=200):
@@ -134,7 +139,7 @@ def build_tfidf_w2v_vectors(vector_dim=200):
                     tf_idf = tfidf_dict[word] * (line_split.count(word) / len(line_split))
                     tf_idf_scores.append(tf_idf)
 
-            review_vec += np.sum(np.multiply(w2v_vecs, np.array(tf_idf_scores).reshape(44, 1)), axis=0)
+            review_vec += np.sum(np.multiply(w2v_vecs, np.array(tf_idf_scores).reshape(len(tf_idf_scores), 1)), axis=0)
             weight_sum += sum(tf_idf_scores)
             if weight_sum != 0:
                 review_vec /= weight_sum
