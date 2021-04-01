@@ -70,8 +70,32 @@ def load_model():
     return model
 
 
-def calc_item_embedding():
-    pass
+def create_item_embedding(vector_dim=200):
+    items_dict = {}
+    for chunk in pd.read_csv('data/tfidf_vectors.tsv', chunksize=10000, sep='\t', skiprows=1):
+        for idx, line in chunk.iterrows():
+            business_id = line[1]
+            embedding = np.fromstring(line[2].replace('\n', '').rstrip(']').lstrip('['), sep=' ')
+            if business_id in items_dict:
+                items_dict[business_id]['embedding_vectors'] += embedding
+                items_dict[business_id]['count_reviews'] += 1
+            else:
+                items_dict[business_id] = {}
+                items_dict[business_id]['embedding_vectors'] = embedding
+                items_dict[business_id]['count_reviews'] = 1
+
+    for business_id in items_dict:
+        items_dict[business_id]['embedding_vectors'] /= items_dict[business_id]['count_reviews']
+
+    embeddings = pd.DataFrame.from_dict(items_dict, orient='index').reset_index().rename(
+        columns={'index': 'business_id'})
+    items = pd.read_csv('data/yelp_business.csv', usecols=['business_id', 'stars'])
+    items = pd.merge(items, embeddings, on='business_id', how='left')
+    if len(items[items['embedding_vectors'].isnull()]) > 0:
+        print('There are ' + str(len(items[items['embedding_vectors'].isnull()])) + ' businesses without reviews')
+
+    # distance.cosine computes distance, and not similarity. So need to subtract the value from 1 to get the similarity.
+    # cosine_similarity = 1 - distance.cosine(vec1, vec2)
 
 
 def calc_user_embedding():
@@ -82,8 +106,8 @@ def build_tfidf_w2v_vectors(vector_dim=200):
     model = load_model()
     # Read each user-item review
     df = pd.read_csv('data/clean_reviews.csv', names=['user_id', 'business_id', 'clean_review'])
-    non_english_reviews = df[df['clean_review'].isnull()]
-    non_english_reviews[['user_id', 'business_id']].to_csv('data/non_english_reviews.csv', index=False)
+    # non_english_reviews = df[df['clean_review'].isnull()]
+    # non_english_reviews[['user_id', 'business_id']].to_csv('data/non_english_reviews.csv', index=False)
     df = df[df['clean_review'].isnull() == False]
     # Building TFIDF model and calculate TFIDF score
     tfidf = TfidfVectorizer(analyzer='word')
@@ -93,7 +117,7 @@ def build_tfidf_w2v_vectors(vector_dim=200):
     tfidf_feature = tfidf.get_feature_names()
 
     df_length = len(df)
-    batch_size = 10000
+    batch_size = 100000
     num_batch = math.ceil(df_length / batch_size)
     # Get batch of sentence and create a text file
     for chunk in np.array_split(df, num_batch):
@@ -103,13 +127,15 @@ def build_tfidf_w2v_vectors(vector_dim=200):
             # Num of words with a valid vector
             weight_sum = 0
             line_split = line.split()
+            w2v_vecs = model[line_split]
+            tf_idf_scores = []
             for word in line_split:
                 if word in model.vocab and word in tfidf_feature:
-                    w2v_vec = model[word]
                     tf_idf = tfidf_dict[word] * (line_split.count(word) / len(line_split))
-                    review_vec += (w2v_vec * tf_idf)
-                    weight_sum += tf_idf
+                    tf_idf_scores.append(tf_idf)
 
+            review_vec += np.sum(np.multiply(w2v_vecs, np.array(tf_idf_scores).reshape(44, 1)), axis=0)
+            weight_sum += sum(tf_idf_scores)
             if weight_sum != 0:
                 review_vec /= weight_sum
             embedding_vectors.append(review_vec)
@@ -128,3 +154,4 @@ if __name__ == '__main__':
     # clean_review_text(load_directory)
     # train_model('data/clean_reviews.csv')
     build_tfidf_w2v_vectors()
+    # create_item_embedding()
