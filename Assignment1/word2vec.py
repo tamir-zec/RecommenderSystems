@@ -139,14 +139,25 @@ def create_user_embedding():
 
 
 def calc_user_vector(user_dict, user_average):
-    user_vector = np.zeros((EMBEDDING_DIM))
+    positive_effect = np.zeros((EMBEDDING_DIM))
+    negative_effect = np.zeros((EMBEDDING_DIM))
+    liked_counter = 0
+    unliked_counter = 0
+    total_items = len(user_dict)
     for business in user_dict:
-        item_offset = (user_dict[business]['business_score'] - user_average) / MAX_SCORE
-        user_vector += item_offset * user_dict[business]['embedding_vector']
+        if user_dict[business]['business_score'] >= 3:
+            liked_counter += 1
+            positive_effect += user_dict[business]['embedding_vector']
+        else:
+            unliked_counter += 1
+            negative_effect += user_dict[business]['embedding_vector']
+
+        # item_offset = (user_dict[business]['business_score'] - user_average + 1) / MAX_SCORE
+    user_vector = (liked_counter / total_items) * positive_effect - (unliked_counter / total_items) * negative_effect
     return user_vector
 
 
-def calc_similarity_between_user_items():
+def calc_similarity_between_user_items(top_rec=10):
     user_embeddings = pd.read_csv('data/users_embedding.tsv', sep='\t')
     user_embeddings['embedding_vector'] = user_embeddings['embedding_vector'].apply(
         lambda x: x.replace('\n', '').rstrip(']').lstrip('[') if not pd.isnull(x) else x)
@@ -159,11 +170,28 @@ def calc_similarity_between_user_items():
 
     # Calculate the similarity between the user and the other item
     res = cosine_similarity(user_mat.values, item_mat.values)
-    res = np.around(res, decimals=4)
-    df_mat = pd.DataFrame(res)
-    df_mat.index = user_embeddings['user_id']
-    df_mat.columns = item_embeddings['business_id']
-    df_mat.to_csv('data/user_business_similarity.csv')
+    import json
+    with open('data/users_ratings.json', 'r') as f:
+        users_history = json.load(f)
+    similarity_mat = pd.read_csv('data/user_business_similarity.csv', nrows=10, index_col=[0])
+
+    items_names = list(similarity_mat.columns)[1:]
+    users_recommendations = {}
+    for row in similarity_mat.itertuples():
+        user_id = row[0]
+        similarities = list(row[1:])
+        recommendations = sorted(range(len(similarities)), key=lambda k: similarities[k], reverse=True)[:top_rec + len(users_history[user_id])]
+        recommendations = [items_names[i] for i in recommendations]
+        for item in users_history[user_id]:
+            if item in recommendations:
+                recommendations.remove(item)
+        users_recommendations[user_id] = recommendations[:top_rec]
+
+    # res = np.around(res, decimals=4)
+    # df_mat = pd.DataFrame(res)
+    # df_mat.index = user_embeddings['user_id']
+    # df_mat.columns = item_embeddings['business_id']
+    # df_mat.to_csv('data/user_business_similarity.csv')
 
 
 def build_tfidf_w2v_vectors(vector_dim=200):
@@ -234,5 +262,5 @@ if __name__ == '__main__':
     # train_model('data/clean_reviews.csv')
     # build_tfidf_w2v_vectors()
     # create_item_embedding()
-    # create_user_embedding()
-    calc_similarity_between_user_items()
+    create_user_embedding()
+    # calc_similarity_between_user_items()
