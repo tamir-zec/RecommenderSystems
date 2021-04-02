@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-
+from sklearn.metrics.pairwise import cosine_similarity
 # from sklearn.feature_extraction.text import TfidfVectorizer
 
 stopwords_list = stopwords.words("english")
@@ -75,18 +75,17 @@ def load_model():
 
 def create_item_embedding():
     items_dict = {}
-    # for chunk in pd.read_csv('data/tfidf_vectors.tsv', chunksize=100000, sep='\t'):
-    chunk = pd.read_csv('data/tfidf_vectors.tsv', nrows=100000, sep='\t')
-    for _, row in chunk.iterrows():
-        business_id = row['business_id']
-        embedding = np.fromstring(row['embedding_vectors'].replace('\n', '').rstrip(']').lstrip('['), sep=' ')
-        if business_id in items_dict:
-            items_dict[business_id]['embedding_vectors'] += embedding
-            items_dict[business_id]['count_reviews'] += 1
-        else:
-            items_dict[business_id] = {}
-            items_dict[business_id]['embedding_vectors'] = embedding
-            items_dict[business_id]['count_reviews'] = 1
+    for chunk in pd.read_csv('data/tfidf_vectors.tsv', chunksize=100000, sep='\t'):
+        for _, row in chunk.iterrows():
+            business_id = row['business_id']
+            embedding = np.fromstring(row['embedding_vectors'].replace('\n', '').rstrip(']').lstrip('['), sep=' ')
+            if business_id in items_dict:
+                items_dict[business_id]['embedding_vectors'] += embedding
+                items_dict[business_id]['count_reviews'] += 1
+            else:
+                items_dict[business_id] = {}
+                items_dict[business_id]['embedding_vectors'] = embedding
+                items_dict[business_id]['count_reviews'] = 1
 
     for business_id in items_dict:
         items_dict[business_id]['embedding_vectors'] /= items_dict[business_id]['count_reviews']
@@ -97,7 +96,7 @@ def create_item_embedding():
     items = pd.merge(items, embeddings, on='business_id', how='left')
     if len(items[items['embedding_vectors'].isnull()]) > 0:
         print('There are ' + str(len(items[items['embedding_vectors'].isnull()])) + ' businesses without reviews')
-    items.to_csv('data/business_embedding.tsv', sep='\t')
+    items.to_csv('data/business_embedding.tsv', sep='\t', index=False)
 
 
 def create_user_embedding():
@@ -127,18 +126,14 @@ def create_user_embedding():
             else:
                 print(business + ' has no embedding')
 
-        user_vectors[user_id] = calc_user_vector(user_dict, user_average)
+        user_vectors[user_id] = {}
+        user_vectors[user_id]['embedding_vector'] = calc_user_vector(user_dict, user_average)
         if user_dict == {}:
             print(user_id + ' has no embedding')
 
     embeddings = pd.DataFrame.from_dict(user_vectors, orient='index').reset_index().rename(
         columns={'index': 'user_id'})
-    embeddings.to_csv('data/users_embedding.tsv', sep='\t')
-
-    # Calculate the similarity between the user and the other item
-
-    # distance.cosine computes distance, and not similarity. So need to subtract the value from 1 to get the similarity.
-    # cosine_similarity = 1 - distance.cosine(vec1, vec2)
+    embeddings.to_csv('data/users_embedding.tsv', sep='\t', index=False)
 
 
 def calc_user_vector(user_dict, user_average):
@@ -147,6 +142,17 @@ def calc_user_vector(user_dict, user_average):
         item_offset = (user_dict[business]['business_score'] - user_average) / MAX_SCORE
         user_vector += item_offset * user_dict[business]['embedding_vector']
     return user_vector
+
+def calc_similarity_between_user_items():
+
+    user_embeddings = pd.read_csv('data/users_embedding.tsv', sep='\t', nrows=1000)
+    item_embeddings = pd.read_csv('data/business_embedding.tsv', sep='\t', nrows=1000)
+    # Calculate the similarity between the user and the other item
+
+    res = cosine_similarity(user_embeddings, item_embeddings)
+
+    # distance.cosine computes distance, and not similarity. So need to subtract the value from 1 to get the similarity.
+    # cosine_similarity = 1 - distance.cosine(vec1, vec2)
 
 
 def build_tfidf_w2v_vectors(vector_dim=200):
@@ -218,3 +224,4 @@ if __name__ == '__main__':
     # build_tfidf_w2v_vectors()
     # create_item_embedding()
     create_user_embedding()
+    # calc_similarity_between_user_items()
