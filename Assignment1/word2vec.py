@@ -75,10 +75,10 @@ def load_model():
 
 def create_item_embedding():
     items_dict = {}
-    for chunk in pd.read_csv('data/tfidf_vectors.tsv', chunksize=100000, sep='\t', skiprows=1):
+    for chunk in pd.read_csv('data/tfidf_vectors.tsv', chunksize=100000, sep='\t'):
         for idx, line in chunk.iterrows():
-            business_id = line[1]
-            embedding = np.fromstring(line[2].replace('\n', '').rstrip(']').lstrip('['), sep=' ')
+            business_id = line['business_id']
+            embedding = np.fromstring(line['embedding_vectors'].replace('\n', '').rstrip(']').lstrip('['), sep=' ')
             if business_id in items_dict:
                 items_dict[business_id]['embedding_vectors'] += embedding
                 items_dict[business_id]['count_reviews'] += 1
@@ -96,7 +96,7 @@ def create_item_embedding():
     items = pd.merge(items, embeddings, on='business_id', how='left')
     if len(items[items['embedding_vectors'].isnull()]) > 0:
         print('There are ' + str(len(items[items['embedding_vectors'].isnull()])) + ' businesses without reviews')
-    items.to_csv('data/items_embedding.tsv', sep='\t')
+    items.to_csv('data/business_embedding.tsv', sep='\t')
 
 
 def create_user_embedding():
@@ -108,7 +108,7 @@ def create_user_embedding():
     users2business = pd.merge(users2business, users, on='user_id', how='left')
 
     # Calculate weighted average of the rated items by the user. The weights are the item rating - abg rating of the user
-    items_embedding = pd.read_csv('data/items_embedding.tsv', sep='\t')
+    items_embedding = pd.read_csv('data/business_embedding.tsv', sep='\t')
     items_embedding['embedding_vectors'] = items_embedding['embedding_vectors'].apply(
         lambda x: np.fromstring(x.replace('\n', '').rstrip(']').lstrip('['), sep=' '))
     items_embedding = items_embedding.set_index('business_id')['embedding_vectors'].todict()
@@ -204,6 +204,6 @@ if __name__ == '__main__':
     load_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'data/userTrainData.csv')
     # clean_review_text(load_directory)
     # train_model('data/clean_reviews.csv')
-    build_tfidf_w2v_vectors()
-    # create_item_embedding()
+    # build_tfidf_w2v_vectors()
+    create_item_embedding()
     # create_user_embedding()
