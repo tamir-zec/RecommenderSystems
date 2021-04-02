@@ -159,6 +159,7 @@ def calc_similarity_between_user_items():
 
     # Calculate the similarity between the user and the other item
     res = cosine_similarity(user_mat.values, item_mat.values)
+    res = np.around(res, decimals=4)
     df_mat = pd.DataFrame(res)
     df_mat.index = user_embeddings['user_id']
     df_mat.columns = item_embeddings['business_id']
