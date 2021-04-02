@@ -7,7 +7,8 @@ import numpy as np
 import pandas as pd
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
-from sklearn.feature_extraction.text import TfidfVectorizer
+
+# from sklearn.feature_extraction.text import TfidfVectorizer
 
 stopwords_list = stopwords.words("english")
 EMBEDDING_DIM = 200
@@ -144,41 +145,50 @@ def build_tfidf_w2v_vectors(vector_dim=200):
     # non_english_reviews = df[df['clean_review'].isnull()]
     # non_english_reviews[['user_id', 'business_id']].to_csv('data/non_english_reviews.csv', index=False)
     df = df[df['clean_review'].isnull() == False]
-    # Building TFIDF model and calculate TFIDF score
-    tfidf = TfidfVectorizer(analyzer='word', min_df=0)
-    tfidf.fit(df['clean_review'])
-    # Get the words from the TF-IDF model
-    tfidf_dict = dict(zip(tfidf.get_feature_names(), list(tfidf.idf_)))
-    tfidf_feature = tfidf.get_feature_names()
+    # # Building TFIDF model and calculate TFIDF score
+    # tfidf = TfidfVectorizer(analyzer='word', min_df=0)
+    # tfidf.fit(df['clean_review'])
+    # # Get the words from the TF-IDF model
+    # tfidf_dict = dict(zip(tfidf.get_feature_names(), list(tfidf.idf_)))
+    # tfidf_feature = tfidf.get_feature_names()
 
     df_length = len(df)
-    batch_size = 100000
+    batch_size = 10000
     num_batch = math.ceil(df_length / batch_size)
     # Get batch of sentence and create a text file
-    for chunk in np.array_split(df, num_batch):
+    for n, chunk in enumerate(np.array_split(df, num_batch)):
+        print('Go over chunk number ' + str(n + 1))
         embedding_vectors = []
         for line in chunk['clean_review']:
             review_vec = np.zeros(vector_dim)
             # Num of words with a valid vector
             weight_sum = 0
             line_split = line.split()
-            w2v_vecs = model[line_split]
-            tf_idf_scores = []
+            # tf_idf_scores = []
             delete_indices = []
             for i, word in enumerate(line_split):
-                if word in model.vocab and word in tfidf_feature:
-                    tf_idf = tfidf_dict[word] * (line_split.count(word) / len(line_split))
-                    tf_idf_scores.append(tf_idf)
-                else:
+                if word not in model.vocab:
                     delete_indices.append(i)
+            #     if word in model.vocab and word in tfidf_feature:
+            #         tf_idf = tfidf_dict[word] * (line_split.count(word) / len(line_split))
+            #         tf_idf_scores.append(tf_idf)
+            #     else:
+            #         delete_indices.append(i)
 
-            # Remove words that don't exists in the TFIDF vectorizer
-            w2v_vecs = np.delete(w2v_vecs, delete_indices, axis=0)
+            # # Remove words that don't exists in the TFIDF vectorizer / w2v model
+            # w2v_vecs = np.delete(w2v_vecs, delete_indices, axis=0)
 
-            review_vec += np.sum(np.multiply(w2v_vecs, np.array(tf_idf_scores).reshape(len(tf_idf_scores), 1)), axis=0)
-            weight_sum += sum(tf_idf_scores)
+            # review_vec += np.sum(np.multiply(w2v_vecs, np.array(tf_idf_scores).reshape(len(tf_idf_scores), 1)), axis=0)
+            # weight_sum += sum(tf_idf_scores)
+            if len(delete_indices) > 0:
+                for i in delete_indices:
+                    line_split.pop(i)
+            w2v_vecs = model[line_split]
+            review_vec += np.sum(w2v_vecs, axis=0)
+            weight_sum += len(line_split)
             if weight_sum != 0:
                 review_vec /= weight_sum
+
             embedding_vectors.append(review_vec)
 
         chunk['embedding_vectors'] = embedding_vectors
