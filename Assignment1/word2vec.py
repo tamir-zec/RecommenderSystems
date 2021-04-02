@@ -75,17 +75,18 @@ def load_model():
 
 def create_item_embedding():
     items_dict = {}
-    for chunk in pd.read_csv('data/tfidf_vectors.tsv', chunksize=100000, sep='\t'):
-        for idx, line in chunk.iterrows():
-            business_id = line['business_id']
-            embedding = np.fromstring(line['embedding_vectors'].replace('\n', '').rstrip(']').lstrip('['), sep=' ')
-            if business_id in items_dict:
-                items_dict[business_id]['embedding_vectors'] += embedding
-                items_dict[business_id]['count_reviews'] += 1
-            else:
-                items_dict[business_id] = {}
-                items_dict[business_id]['embedding_vectors'] = embedding
-                items_dict[business_id]['count_reviews'] = 1
+    # for chunk in pd.read_csv('data/tfidf_vectors.tsv', chunksize=100000, sep='\t'):
+    chunk = pd.read_csv('data/tfidf_vectors.tsv', nrows=100000, sep='\t')
+    for _, row in chunk.iterrows():
+        business_id = row['business_id']
+        embedding = np.fromstring(row['embedding_vectors'].replace('\n', '').rstrip(']').lstrip('['), sep=' ')
+        if business_id in items_dict:
+            items_dict[business_id]['embedding_vectors'] += embedding
+            items_dict[business_id]['count_reviews'] += 1
+        else:
+            items_dict[business_id] = {}
+            items_dict[business_id]['embedding_vectors'] = embedding
+            items_dict[business_id]['count_reviews'] = 1
 
     for business_id in items_dict:
         items_dict[business_id]['embedding_vectors'] /= items_dict[business_id]['count_reviews']
@@ -107,22 +108,32 @@ def create_user_embedding():
     users2business = users2business.reset_index().rename(columns={0: 'business'})
     users2business = pd.merge(users2business, users, on='user_id', how='left')
 
-    # Calculate weighted average of the rated items by the user. The weights are the item rating - abg rating of the user
+    # Calculate weighted average of the rated items by the user. The weights are the item rating - avg rating of the user
     items_embedding = pd.read_csv('data/business_embedding.tsv', sep='\t')
     items_embedding['embedding_vectors'] = items_embedding['embedding_vectors'].apply(
-        lambda x: np.fromstring(x.replace('\n', '').rstrip(']').lstrip('['), sep=' '))
-    items_embedding = items_embedding.set_index('business_id')['embedding_vectors'].todict()
+        lambda x: np.fromstring(x.replace('\n', '').rstrip(']').lstrip('['), sep=' ') if not pd.isnull(x) else x)
+    items_embedding = items_embedding[items_embedding['embedding_vectors'].isnull() == False].set_index('business_id')['embedding_vectors'].to_dict()
     user_vectors = {}
     for _, row in users2business.iterrows():
         user_id = row['user_id']
         businesses_scores = row['business']
         user_average = row['average_stars']
         user_dict = {}
-        for key, value in businesses_scores:
-            user_dict[key]['embedding_vector'] = items_embedding[key]
-            user_dict[key]['business_score'] = value
+        for business, rating in businesses_scores.items():
+            if business in items_embedding:
+                user_dict[business] = {}
+                user_dict[business]['embedding_vector'] = items_embedding[business]
+                user_dict[business]['business_score'] = rating
+            else:
+                print(business + ' has no embedding')
 
         user_vectors[user_id] = calc_user_vector(user_dict, user_average)
+        if user_dict == {}:
+            print(user_id + ' has no embedding')
+
+    embeddings = pd.DataFrame.from_dict(user_vectors, orient='index').reset_index().rename(
+        columns={'index': 'user_id'})
+    embeddings.to_csv('data/users_embedding.tsv', sep='\t')
 
     # Calculate the similarity between the user and the other item
 
@@ -131,8 +142,8 @@ def create_user_embedding():
 
 
 def calc_user_vector(user_dict, user_average):
-    user_vector = np.zeros(EMBEDDING_DIM, 1)
-    for business in user_dict.keys():
+    user_vector = np.zeros((EMBEDDING_DIM))
+    for business in user_dict:
         item_offset = (user_dict[business]['business_score'] - user_average) / MAX_SCORE
         user_vector += item_offset * user_dict[business]['embedding_vector']
     return user_vector
@@ -205,5 +216,5 @@ if __name__ == '__main__':
     # clean_review_text(load_directory)
     # train_model('data/clean_reviews.csv')
     # build_tfidf_w2v_vectors()
-    create_item_embedding()
-    # create_user_embedding()
+    # create_item_embedding()
+    create_user_embedding()
