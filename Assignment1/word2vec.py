@@ -147,11 +147,11 @@ def calc_user_vector(user_dict, user_average):
 
 
 def calc_similarity_between_user_items():
-    user_embeddings = pd.read_csv('data/users_embedding.tsv', sep='\t', nrows=1000)
+    user_embeddings = pd.read_csv('data/users_embedding.tsv', sep='\t')
     user_embeddings['embedding_vector'] = user_embeddings['embedding_vector'].apply(
         lambda x: x.replace('\n', '').rstrip(']').lstrip('[') if not pd.isnull(x) else x)
     user_mat = user_embeddings.apply(lambda x: x['embedding_vector'].split(), axis=1, result_type='expand')
-    item_embeddings = pd.read_csv('data/business_embedding.tsv', sep='\t', nrows=1000)
+    item_embeddings = pd.read_csv('data/business_embedding.tsv', sep='\t')
     item_embeddings = item_embeddings[item_embeddings['embedding_vectors'].isnull() == False]
     item_embeddings['embedding_vectors'] = item_embeddings['embedding_vectors'].apply(
         lambda x: x.replace('\n', '').rstrip(']').lstrip('[ ') if not pd.isnull(x) else x)
@@ -162,7 +162,7 @@ def calc_similarity_between_user_items():
     df_mat = pd.DataFrame(res)
     df_mat.index = user_embeddings['user_id']
     df_mat.columns = item_embeddings['business_id']
-    df_mat.to_csv('user_business_similarity.csv')
+    df_mat.to_csv('data/user_business_similarity.csv')
 
 
 def build_tfidf_w2v_vectors(vector_dim=200):
