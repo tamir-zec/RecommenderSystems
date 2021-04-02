@@ -8,6 +8,7 @@ import pandas as pd
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from sklearn.metrics.pairwise import cosine_similarity
+
 # from sklearn.feature_extraction.text import TfidfVectorizer
 
 stopwords_list = stopwords.words("english")
@@ -111,7 +112,8 @@ def create_user_embedding():
     items_embedding = pd.read_csv('data/business_embedding.tsv', sep='\t')
     items_embedding['embedding_vectors'] = items_embedding['embedding_vectors'].apply(
         lambda x: np.fromstring(x.replace('\n', '').rstrip(']').lstrip('['), sep=' ') if not pd.isnull(x) else x)
-    items_embedding = items_embedding[items_embedding['embedding_vectors'].isnull() == False].set_index('business_id')['embedding_vectors'].to_dict()
+    items_embedding = items_embedding[items_embedding['embedding_vectors'].isnull() == False].set_index('business_id')[
+        'embedding_vectors'].to_dict()
     user_vectors = {}
     for _, row in users2business.iterrows():
         user_id = row['user_id']
@@ -143,16 +145,24 @@ def calc_user_vector(user_dict, user_average):
         user_vector += item_offset * user_dict[business]['embedding_vector']
     return user_vector
 
+
 def calc_similarity_between_user_items():
-
     user_embeddings = pd.read_csv('data/users_embedding.tsv', sep='\t', nrows=1000)
+    user_embeddings['embedding_vector'] = user_embeddings['embedding_vector'].apply(
+        lambda x: x.replace('\n', '').rstrip(']').lstrip('[') if not pd.isnull(x) else x)
+    user_mat = user_embeddings.apply(lambda x: x['embedding_vector'].split(), axis=1, result_type='expand')
     item_embeddings = pd.read_csv('data/business_embedding.tsv', sep='\t', nrows=1000)
+    item_embeddings = item_embeddings[item_embeddings['embedding_vectors'].isnull() == False]
+    item_embeddings['embedding_vectors'] = item_embeddings['embedding_vectors'].apply(
+        lambda x: x.replace('\n', '').rstrip(']').lstrip('[ ') if not pd.isnull(x) else x)
+    item_mat = item_embeddings.apply(lambda x: x['embedding_vectors'].split(), axis=1, result_type='expand')
+
     # Calculate the similarity between the user and the other item
-
-    res = cosine_similarity(user_embeddings, item_embeddings)
-
-    # distance.cosine computes distance, and not similarity. So need to subtract the value from 1 to get the similarity.
-    # cosine_similarity = 1 - distance.cosine(vec1, vec2)
+    res = cosine_similarity(user_mat.values, item_mat.values)
+    df_mat = pd.DataFrame(res)
+    df_mat.index = user_embeddings['user_id']
+    df_mat.columns = item_embeddings['business_id']
+    df_mat.to_csv('user_business_similarity.csv')
 
 
 def build_tfidf_w2v_vectors(vector_dim=200):
@@ -223,5 +233,5 @@ if __name__ == '__main__':
     # train_model('data/clean_reviews.csv')
     # build_tfidf_w2v_vectors()
     # create_item_embedding()
-    create_user_embedding()
-    # calc_similarity_between_user_items()
+    # create_user_embedding()
+    calc_similarity_between_user_items()
