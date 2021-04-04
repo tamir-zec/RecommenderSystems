@@ -1,3 +1,4 @@
+import json
 import os
 import re
 
@@ -158,35 +159,40 @@ def calc_user_vector(user_dict, user_average):
 
 
 def calc_similarity_between_user_items(top_rec=10):
-    user_embeddings = pd.read_csv('data/users_embedding.tsv', sep='\t')
+    user_embeddings = pd.read_csv('data/users_embedding.tsv', sep='\t', nrows=1000)
     user_embeddings['embedding_vector'] = user_embeddings['embedding_vector'].apply(
         lambda x: x.replace('\n', '').rstrip(']').lstrip('[') if not pd.isnull(x) else x)
-    user_mat = user_embeddings.apply(lambda x: x['embedding_vector'].split(), axis=1, result_type='expand')
-    item_embeddings = pd.read_csv('data/business_embedding.tsv', sep='\t')
+    user_mat = user_embeddings.set_index('user_id').apply(lambda x: x['embedding_vector'].split(), axis=1,
+                                                          result_type='expand')
+    item_embeddings = pd.read_csv('data/business_embedding.tsv', sep='\t', nrows=1000)
     item_embeddings = item_embeddings[item_embeddings['embedding_vectors'].isnull() == False]
     item_embeddings['embedding_vectors'] = item_embeddings['embedding_vectors'].apply(
         lambda x: x.replace('\n', '').rstrip(']').lstrip('[ ') if not pd.isnull(x) else x)
     item_mat = item_embeddings.apply(lambda x: x['embedding_vectors'].split(), axis=1, result_type='expand')
 
-    # Calculate the similarity between the user and the other item
-    res = cosine_similarity(user_mat.values, item_mat.values)
-    import json
+    # Calculate the similarity between the user and the other items
     with open('data/users_ratings.json', 'r') as f:
         users_history = json.load(f)
-    similarity_mat = pd.read_csv('data/user_business_similarity.csv', nrows=10, index_col=[0])
-
-    items_names = list(similarity_mat.columns)[1:]
+    items_names = list(item_embeddings['business_id'])
     users_recommendations = {}
-    for row in similarity_mat.itertuples():
-        user_id = row[0]
-        similarities = list(row[1:])
-        recommendations = sorted(range(len(similarities)), key=lambda k: similarities[k], reverse=True)[:top_rec + len(users_history[user_id])]
-        recommendations = [items_names[i] for i in recommendations]
-        for item in users_history[user_id]:
-            if item in recommendations:
-                recommendations.remove(item)
-        users_recommendations[user_id] = recommendations[:top_rec]
+    df_length = len(user_mat)
+    batch_size = 10000
+    num_batch = math.ceil(df_length / batch_size)
+    for batch, chunk_user in enumerate(np.array_split(user_mat, num_batch)):
+        print('Go over chunk number ' + str(batch + 1))
+        similarity_mat = cosine_similarity(chunk_user.values, item_mat.values)
+        for i, user_id in enumerate(chunk_user.index):
+            similarities = similarity_mat[i]
+            recommendations = sorted(range(len(similarities)), key=lambda k: similarities[k], reverse=True)[
+                              :top_rec + len(users_history[user_id])]
+            recommendations = [items_names[i] for i in recommendations]
+            for item in users_history[user_id]:
+                if item in recommendations:
+                    recommendations.remove(item)
+            users_recommendations[user_id] = recommendations[:top_rec]
 
+    with open('data/users_recommendations.json', 'w') as f:
+        json.dump(users_recommendations, f)
     # res = np.around(res, decimals=4)
     # df_mat = pd.DataFrame(res)
     # df_mat.index = user_embeddings['user_id']
@@ -262,5 +268,5 @@ if __name__ == '__main__':
     # train_model('data/clean_reviews.csv')
     # build_tfidf_w2v_vectors()
     # create_item_embedding()
-    create_user_embedding()
-    # calc_similarity_between_user_items()
+    # create_user_embedding()
+    calc_similarity_between_user_items()
