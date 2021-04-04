@@ -6,14 +6,16 @@ import pandas as pd
 from SVD_MF import RecommenderSystem
 
 RANDOM_SEED = 4
+TRAIN_MODE = True
 
 if __name__ == '__main__':
     np.random.seed(RANDOM_SEED)
-    recsys = RecommenderSystem('data/userTrainData.csv', advanced=False, content=False)
+    recsys = RecommenderSystem('data', advanced=False, content=False, train_mode=TRAIN_MODE)
+    # recsys.TrainContentModel()
     recsys.Load()
-    for learning_rate in [0.075, 0.05, 0.025, 0.01, 0.005]:
-        for sgd_step_size in [0.075, 0.05, 0.025, 0.01, 0.005]:
-            for latent_factors, rand_const in [(20, 0.2), (50, 0.1), (100, 0.05)]:
+    for learning_rate in [0.05, 0.04, 0.03]:
+        for sgd_step_size in [0.05, 0.04, 0.03]:
+            for latent_factors, rand_const in [(50, 0.1), (100, 0.05)]:
                 for n_iter in [100]:
                     recsys.learning_rate = learning_rate
                     recsys.sgd_step_size = sgd_step_size

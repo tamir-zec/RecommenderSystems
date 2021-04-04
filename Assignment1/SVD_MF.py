@@ -1,5 +1,4 @@
 import os
-
 from collections import defaultdict
 
 import numpy as np
@@ -10,25 +9,24 @@ from scipy import sparse
 class RecommenderSystem:
 
     def __init__(self, data_path, learning_rate=0.05, sgd_step_size=0.05, implicit_lrate=0.05, latent_factors=20,
-                 rand_const=0.2, advanced=False, content=False):
+                 rand_const=0.2, advanced=False, content=False, train_mode=True):
         self.learning_rate = learning_rate
         self.sgd_step_size = sgd_step_size
         self.latent_factors = latent_factors
         self.rand_const = rand_const
         self.data_path = data_path
         self.advanced = advanced
-        self.content = content
         if self.advanced:
             self.users2items = defaultdict(list)
             self.implicit_learning_rate = implicit_lrate
-        if self.content:
-            self.items_reviews = {}
+        self.content = content
+        self.train_mode = train_mode
 
     def Load(self):
-        load_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), self.data_path)
+        load_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), self.data_path, 'userTrainData.csv')
 
         ratings, users, items = [], [], []
-        for df in pd.read_csv(load_directory, chunksize=10000, usecols=['user_id', 'business_id', 'stars']):
+        for df in pd.read_csv(load_directory, chunksize=100000, usecols=['user_id', 'business_id', 'stars']):
             ratings.extend(df['stars'].values)
             users.extend(df['user_id'].values)
             items.extend(df['business_id'].values)
@@ -53,6 +51,24 @@ class RecommenderSystem:
         # Create rating matrix as sparse matrix
         self.ratings_matrix = sparse.csr_matrix((ratings, (np.array(users), np.array(items))),
                                                 shape=(self.total_users, self.total_items))
+
+        if not self.train_mode:
+            # Initialize test rating matrix
+            load_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), self.data_path,
+                                          'userTestData.csv')
+            self.test_ratings_matrix = sparse.csr_matrix((self.total_users, self.total_items))
+            for df in pd.read_csv(load_directory, chunksize=100000, usecols=['user_id', 'business_id', 'stars']):
+                for _, row in df.iterrows():
+                    if row['user_id'] in self.user2idx and row['business_id'] in self.item2idx:
+                        u_id = self.user2idx[row['user_id']]
+                        i_id = self.item2idx[row['business_id']]
+                    else:
+                        if row['user_id'] not in self.user2idx:
+                            print(row['user_id'] + ' not appeared in the train data')
+                        if row['business_id'] not in self.item2idx:
+                            print(row['business_id'] + ' not appeared in the train data')
+                        continue
+                    self.test_ratings_matrix[u_id, i_id] = row['stars']
 
         self.initialize_data()
 
@@ -87,7 +103,10 @@ class RecommenderSystem:
         rmse = []
         mae = []
         # shuffle entries and calculate SGD for each user/item
-        sgd_indices = np.arange(len(self.idx_row))
+        if self.train_mode:
+            sgd_indices = np.arange(len(self.train_idx_row))
+        else:
+            sgd_indices = np.arange(len(self.idx_row))
         for n in range(n_iter):
             np.random.shuffle(sgd_indices)
             self.sgd_step(sgd_indices)
@@ -100,8 +119,7 @@ class RecommenderSystem:
 
         return rmse, mae, n
 
-    def TrainContentModel(self, n_iter=20):
-        # todo: implement
+    def TrainContentModel(self, top_rec=10):
         pass
 
     def PredictRating(self):
@@ -125,7 +143,9 @@ class RecommenderSystem:
         # Keep the indices and values of the non-zero entries in the sparse matrix
         self.idx_row, self.idx_col, self.rating_val = sparse.find(self.ratings_matrix)
         # split to train/validation
-        self.train_ratings_matrix, self.val_rating_matrix = self.train_validation_split()
+        if self.train_mode:
+            self.train_ratings_matrix, self.val_rating_matrix = self.train_validation_split()
+            self.train_idx_row, self.train_idx_col, _ = sparse.find(self.train_ratings_matrix)
         if self.advanced:
             self.implicit_matrix = self.rand_const * np.random.rand(self.latent_factors, self.total_items)
 
@@ -145,11 +165,18 @@ class RecommenderSystem:
 
     def sgd_step_base(self, sgd_indices):
         for idx in sgd_indices:
-            u = self.idx_row[idx]
-            i = self.idx_col[idx]
+            if self.train_mode:
+                u = self.train_idx_row[idx]
+                i = self.train_idx_col[idx]
+            else:
+                u = self.idx_row[idx]
+                i = self.idx_col[idx]
             prediction = self.calc_rating(u, i)
             # Error
-            e = (self.ratings_matrix[u, i] - prediction)
+            if self.train_mode:
+                e = (self.train_ratings_matrix[u, i] - prediction)
+            else:
+                e = (self.ratings_matrix[u, i] - prediction)
             # Update biases
             self.user_bias[u] += self.sgd_step_size * (e - self.learning_rate * self.user_bias[u])
             self.item_bias[i] += self.sgd_step_size * (e - self.learning_rate * self.item_bias[i])
@@ -161,11 +188,18 @@ class RecommenderSystem:
 
     def sgd_step_advanced(self, sgd_indices):
         for idx in sgd_indices:
-            u = self.idx_row[idx]
-            i = self.idx_col[idx]
+            if self.train_mode:
+                u = self.train_idx_row[idx]
+                i = self.train_idx_col[idx]
+            else:
+                u = self.idx_row[idx]
+                i = self.idx_col[idx]
             prediction = self.calc_rating(u, i)
             # Error
-            e = (self.ratings_matrix[u, i] - prediction)
+            if self.train_mode:
+                e = (self.train_ratings_matrix[u, i] - prediction)
+            else:
+                e = (self.ratings_matrix[u, i] - prediction)
             # Update biases
             self.user_bias[u] += self.sgd_step_size * (e - self.learning_rate * self.user_bias[u])
             self.item_bias[i] += self.sgd_step_size * (e - self.learning_rate * self.item_bias[i])
@@ -247,6 +281,6 @@ class RecommenderSystem:
         predictions = sparse.csr_matrix((data, (row_idx, col_idx)), shape=(self.total_users, self.total_items))
         return predictions
 
-    def calc_test_preictions(self):
+    def calc_test_predictions(self):
         # todo: handle missing users/items in the train data
         pass
