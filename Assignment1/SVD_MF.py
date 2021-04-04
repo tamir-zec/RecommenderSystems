@@ -75,12 +75,34 @@ class RecommenderSystem:
     def calc_rmse(self, ratings, predictions):
         N = len(predictions.nonzero()[0])
         result = (ratings - predictions).power(2)
-        return np.sqrt(result.sum() / N)
+        result_sum = result.sum()
+        if not self.train_mode:
+            missing_items_preds = self.calc_test_missing()
+            N += len(missing_items_preds)
+            result_sum += self.calc_missing_rmse_part(missing_items_preds).sum()
+
+        return np.sqrt(result_sum / N)
+
+    def calc_missing_rmse_part(self, missing_items_preds):
+        ratings = np.array([item[2] for item in self.missing_item])
+        missing_preds = np.array(missing_items_preds)
+        return (ratings - missing_preds).power(2)
 
     def calc_mae(self, ratings, predictions):
         N = len(predictions.nonzero()[0])
         result = np.abs(ratings - predictions)
-        return result.sum() / N
+        result_sum = result.sum()
+        if not self.train_mode:
+            missing_items_preds = self.calc_test_missing()
+            N += len(missing_items_preds)
+            result_sum += self.calc_missing_mae_part(missing_items_preds).sum()
+
+        return result_sum / N
+
+    def calc_missing_mae_part(self, missing_items_preds):
+        ratings = np.array([item[2] for item in self.missing_item])
+        missing_preds = np.array(missing_items_preds)
+        return np.abs(ratings - missing_preds)
 
     def TrainBaseModel(self, n_iter=20):
         rmse = []
@@ -126,8 +148,11 @@ class RecommenderSystem:
         pass
 
     def PredictRating(self):
-        # todo: implement
-        self.calc_predictions()
+        modelPredictions = self.calc_predictions()
+        if not self.train_mode:
+            missing_business_ratings = self.calc_test_missing()
+
+        return modelPredictions, missing_business_ratings
 
     def TrainHybridModel(self):
         # todo: implement
@@ -275,6 +300,13 @@ class RecommenderSystem:
         return 1 / np.sqrt(N_u_implicit) * sum_imp_weight
 
     def calc_predictions(self):
+        if self.train_mode:
+            return self.calc_train_predictions(self)
+        else:
+            # returns two values the predicions in sparse and missing items as list of predictions
+            return self.calc_test_predictions(self)
+
+    def calc_train_predictions(self):
         row_idx, col_idx = self.val_rating_matrix.nonzero()
         data = []
         for u_id, i_id in zip(row_idx, col_idx):
@@ -285,5 +317,25 @@ class RecommenderSystem:
         return predictions
 
     def calc_test_predictions(self):
-        # todo: handle missing users/items in the train data
-        pass
+        row_idx, col_idx = self.test_ratings_matrix.nonzero()
+        data = []
+        missing_businesses_predictions = []
+        for u_id, i_id in zip(row_idx, col_idx):
+            prediction = self.calc_rating(u_id, i_id)
+            data.append(prediction)
+        predictions = sparse.csr_matrix((data, (row_idx, col_idx)), shape=(self.total_users, self.total_items))
+        return predictions
+
+    def calc_test_missing(self):
+        # missing buisnesses - a list of touple of user id and buisness id, as well as original rating
+        missing_businesses = self.missing_items
+        missing_businesses_predictions = []
+        for user_id, business_id, _ in missing_businesses:
+            missing_businesses_predictions.append(self.give_missing_business_pred(user_id, business_id))
+        return missing_businesses_predictions
+
+    def give_missing_business_pred(self, user_id, business_id):
+        user_index = self.user2idx[user_id]
+        user_ratings = self.test_ratings_matrix.getrow(user_index)
+        user_average = user_ratings.mean()
+        return user_average
