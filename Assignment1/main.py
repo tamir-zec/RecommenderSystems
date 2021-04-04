@@ -10,16 +10,17 @@ TRAIN_MODE = False
 
 
 def TrainHybridModel():
-    recsys1 = RecommenderSystem('data', learning_rate=0.05, sgd_step_size=0.05, latent_factors=50,
-                                rand_const=0.2, advanced=False, content=False, train_mode=TRAIN_MODE)
+    recsys1 = RecommenderSystem('data', learning_rate=0.03, sgd_step_size=0.03, latent_factors=50,
+                                rand_const=0.1, advanced=False, content=False, train_mode=TRAIN_MODE)
     recsys1.Load()
-    recsys1.TrainBaseModel()
+    recsys1.TrainBaseModel(n_iter=5)
     base_model_predictions, _ = recsys1.PredictRating()
 
-    recsys2 = RecommenderSystem('data', learning_rate=0.05, sgd_step_size=0.05, implicit_lrate=0.05,
-                                latent_factors=50, rand_const=0.2, advanced=True, content=False, train_mode=TRAIN_MODE)
+    recsys2 = RecommenderSystem('data', learning_rate=0.03, sgd_step_size=0.03, implicit_lrate=0.05,
+                                latent_factors=100, rand_const=0.05, advanced=True, content=False,
+                                train_mode=TRAIN_MODE)
     recsys2.Load()
-    recsys2.TrainAdvancedModel()
+    recsys2.TrainAdvancedModel(n_iter=1)
     advanced_model_predictions, _ = recsys2.PredictRating()
 
     recsys3 = RecommenderSystem('data', advanced=False, content=True, train_mode=TRAIN_MODE)
@@ -41,10 +42,10 @@ if __name__ == '__main__':
 
     recsys = RecommenderSystem('data', advanced=False, content=False, train_mode=TRAIN_MODE)
     recsys.Load()
-    for learning_rate in [0.05, 0.04, 0.03]:
-        for sgd_step_size in [0.05, 0.04, 0.03]:
-            for latent_factors, rand_const in [(50, 0.1), (100, 0.05)]:
-                for n_iter in [1]:
+    for learning_rate in [0.03]:
+        for sgd_step_size in [0.03]:
+            for latent_factors, rand_const in [(50, 0.1)]:  # , (100, 0.05)]:
+                for n_iter in [5]:
                     recsys.learning_rate = learning_rate
                     recsys.sgd_step_size = sgd_step_size
                     recsys.latent_factors = latent_factors
