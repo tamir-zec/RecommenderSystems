@@ -86,7 +86,10 @@ class RecommenderSystem:
         rmse = []
         mae = []
         # shuffle entries and calculate SGD for each user/item
-        sgd_indices = np.arange(len(self.idx_row))
+        if self.train_mode:
+            sgd_indices = np.arange(len(self.train_idx_row))
+        else:
+            sgd_indices = np.arange(len(self.idx_row))
         for n in range(n_iter):
             np.random.shuffle(sgd_indices)
             self.sgd_step(sgd_indices)

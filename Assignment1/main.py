@@ -16,7 +16,7 @@ if __name__ == '__main__':
     for learning_rate in [0.05, 0.04, 0.03]:
         for sgd_step_size in [0.05, 0.04, 0.03]:
             for latent_factors, rand_const in [(50, 0.1), (100, 0.05)]:
-                for n_iter in [100]:
+                for n_iter in [300]:
                     recsys.learning_rate = learning_rate
                     recsys.sgd_step_size = sgd_step_size
                     recsys.latent_factors = latent_factors
