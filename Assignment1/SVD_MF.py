@@ -1,3 +1,4 @@
+import json
 import os
 from collections import defaultdict
 
@@ -53,22 +54,35 @@ class RecommenderSystem:
                                                 shape=(self.total_users, self.total_items))
 
         if not self.train_mode:
+            self.missing_items = []
             # Initialize test rating matrix
             load_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), self.data_path,
                                           'userTestData.csv')
-            self.test_ratings_matrix = sparse.csr_matrix((self.total_users, self.total_items))
+            missing_business = []
+            missing_users = []
+            test_ratings, test_users, test_items = [], [], []
             for df in pd.read_csv(load_directory, chunksize=100000, usecols=['user_id', 'business_id', 'stars']):
                 for _, row in df.iterrows():
                     if row['user_id'] in self.user2idx and row['business_id'] in self.item2idx:
                         u_id = self.user2idx[row['user_id']]
                         i_id = self.item2idx[row['business_id']]
+                        test_ratings.append(row['stars'])
+                        test_users.append(u_id)
+                        test_items.append(i_id)
                     else:
                         if row['user_id'] not in self.user2idx:
-                            print(row['user_id'] + ' not appeared in the train data')
+                            missing_users.append(row['user_id'])
                         if row['business_id'] not in self.item2idx:
-                            print(row['business_id'] + ' not appeared in the train data')
+                            missing_business.append(row['business_id'])
+                        self.missing_items.append((row['user_id'], row['business_id'], row['stars']))
                         continue
-                    self.test_ratings_matrix[u_id, i_id] = row['stars']
+
+            self.test_ratings_matrix = sparse.csr_matrix((test_ratings, (np.array(test_users), np.array(test_items))),
+                                                         shape=(self.total_users, self.total_items))
+            # if len(missing_users) > 0:
+            #     pd.DataFrame(missing_users).to_csv('data/missing_users.csv', index=False, header=False)
+            # if len(missing_business) > 0:
+            #     pd.DataFrame(missing_business).to_csv('data/missing_business.csv', index=False, header=False)
 
         self.initialize_data()
 
@@ -84,9 +98,9 @@ class RecommenderSystem:
         return np.sqrt(result_sum / N)
 
     def calc_missing_rmse_part(self, missing_items_preds):
-        ratings = np.array([item[2] for item in self.missing_item])
+        ratings = np.array([item[2] for item in self.missing_items])
         missing_preds = np.array(missing_items_preds)
-        return (ratings - missing_preds).power(2)
+        return np.power((ratings - missing_preds), 2)
 
     def calc_mae(self, ratings, predictions):
         N = len(predictions.nonzero()[0])
@@ -100,14 +114,14 @@ class RecommenderSystem:
         return result_sum / N
 
     def calc_missing_mae_part(self, missing_items_preds):
-        ratings = np.array([item[2] for item in self.missing_item])
+        ratings = np.array([item[2] for item in self.missing_items])
         missing_preds = np.array(missing_items_preds)
         return np.abs(ratings - missing_preds)
 
     def TrainBaseModel(self, n_iter=20):
         rmse = []
         mae = []
-        # shuffle entries and calculate SGD for each user/item
+        # Shuffle entries and calculate SGD for each user/item
         if self.train_mode:
             sgd_indices = np.arange(len(self.train_idx_row))
         else:
@@ -115,12 +129,18 @@ class RecommenderSystem:
         for n in range(n_iter):
             np.random.shuffle(sgd_indices)
             self.sgd_step(sgd_indices)
+            if self.train_mode:
+                predictions = self.calc_predictions()
+                rmse.append(self.calc_rmse(self.val_rating_matrix, predictions))
+                mae.append(self.calc_mae(self.val_rating_matrix, predictions))
+                # Stop rule
+                if len(rmse) > 1 and (rmse[-1] > rmse[-2] or mae[-1] > mae[-2]):
+                    break
+
+        if not self.train_mode:
             predictions = self.calc_predictions()
-            rmse.append(self.calc_rmse(self.val_rating_matrix, predictions))
-            mae.append(self.calc_mae(self.val_rating_matrix, predictions))
-            # Stop rule
-            if len(rmse) > 1 and (rmse[-1] > rmse[-2] or mae[-1] > mae[-2]):
-                break
+            rmse.append(self.calc_rmse(self.test_ratings_matrix, predictions))
+            mae.append(self.calc_mae(self.test_ratings_matrix, predictions))
 
         return rmse, mae, n
 
@@ -135,12 +155,18 @@ class RecommenderSystem:
         for n in range(n_iter):
             np.random.shuffle(sgd_indices)
             self.sgd_step(sgd_indices)
+            if self.train_mode:
+                predictions = self.calc_predictions()
+                rmse.append(self.calc_rmse(self.val_rating_matrix, predictions))
+                mae.append(self.calc_mae(self.val_rating_matrix, predictions))
+                # Stop rule
+                if len(rmse) > 1 and (rmse[-1] > rmse[-2] or mae[-1] > mae[-2]):
+                    break
+
+        if not self.train_mode:
             predictions = self.calc_predictions()
-            rmse.append(self.calc_rmse(self.val_rating_matrix, predictions))
-            mae.append(self.calc_mae(self.val_rating_matrix, predictions))
-            # Stop rule
-            if len(rmse) > 1 and (rmse[-1] > rmse[-2] or mae[-1] > mae[-2]):
-                break
+            rmse.append(self.calc_rmse(self.test_ratings_matrix, predictions))
+            mae.append(self.calc_mae(self.test_ratings_matrix, predictions))
 
         return rmse, mae, n
 
@@ -148,18 +174,12 @@ class RecommenderSystem:
         pass
 
     def PredictRating(self):
-        modelPredictions = self.calc_predictions()
+        model_predictions = self.calc_predictions()
+        missing_item_ratings = []
         if not self.train_mode:
-            missing_business_ratings = self.calc_test_missing()
+            missing_item_ratings = self.calc_test_missing()
 
-        return modelPredictions, missing_business_ratings
-
-    def TrainHybridModel(self):
-        # todo: implement
-        self.TrainBaseModel()
-        self.TrainAdvancedModel()
-        self.TrainContentModel()
-        pass
+        return model_predictions, missing_item_ratings
 
     def initialize_data(self):
         # Initialize bias vectors
@@ -281,6 +301,13 @@ class RecommenderSystem:
                 rating = 5
         return rating
 
+    def calc_rating_content(self, user, item):
+        # todo: implement
+
+        with open('data/users_recommendations.json', 'r') as f:
+            users_recommendations = json.load(f)
+        pass
+
     def calc_rating(self, user, item):
         if self.advanced:
             return self.calc_rating_advanced(user, item)
@@ -295,16 +322,15 @@ class RecommenderSystem:
         for item_name in self.users2items[user_name]:
             item_indices.append(self.item2idx[item_name])
         N_u_implicit = len(item_indices)
-        # Calculate rating by new formula - 15 from koren 2008
+        # Calculate rating by new formula (15) from koren 2008
         sum_imp_weight = np.sum(self.implicit_matrix[:, item_indices], axis=1)
         return 1 / np.sqrt(N_u_implicit) * sum_imp_weight
 
     def calc_predictions(self):
         if self.train_mode:
-            return self.calc_train_predictions(self)
+            return self.calc_train_predictions()
         else:
-            # returns two values the predicions in sparse and missing items as list of predictions
-            return self.calc_test_predictions(self)
+            return self.calc_test_predictions()
 
     def calc_train_predictions(self):
         row_idx, col_idx = self.val_rating_matrix.nonzero()
@@ -319,7 +345,6 @@ class RecommenderSystem:
     def calc_test_predictions(self):
         row_idx, col_idx = self.test_ratings_matrix.nonzero()
         data = []
-        missing_businesses_predictions = []
         for u_id, i_id in zip(row_idx, col_idx):
             prediction = self.calc_rating(u_id, i_id)
             data.append(prediction)
@@ -327,15 +352,13 @@ class RecommenderSystem:
         return predictions
 
     def calc_test_missing(self):
-        # missing buisnesses - a list of touple of user id and buisness id, as well as original rating
-        missing_businesses = self.missing_items
-        missing_businesses_predictions = []
-        for user_id, business_id, _ in missing_businesses:
-            missing_businesses_predictions.append(self.give_missing_business_pred(user_id, business_id))
-        return missing_businesses_predictions
+        # Missing items - a list of tuple of user id, business id, and original rating
+        missing_items_predictions = []
+        for user_id, _, _ in self.missing_items:
+            missing_items_predictions.append(self.give_missing_item_pred(user_id))
+        return missing_items_predictions
 
-    def give_missing_business_pred(self, user_id, business_id):
+    def give_missing_item_pred(self, user_id):
         user_index = self.user2idx[user_id]
-        user_ratings = self.test_ratings_matrix.getrow(user_index)
-        user_average = user_ratings.mean()
+        user_average = self.ratings_matrix[user_index, :].data.mean()
         return user_average
