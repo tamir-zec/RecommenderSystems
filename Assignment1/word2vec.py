@@ -159,12 +159,12 @@ def calc_user_vector(user_dict, user_average):
 
 
 def calc_similarity_between_user_items(top_rec=10):
-    user_embeddings = pd.read_csv('data/users_embedding.tsv', sep='\t', nrows=1000)
+    user_embeddings = pd.read_csv('data/users_embedding.tsv', sep='\t')
     user_embeddings['embedding_vector'] = user_embeddings['embedding_vector'].apply(
         lambda x: x.replace('\n', '').rstrip(']').lstrip('[') if not pd.isnull(x) else x)
     user_mat = user_embeddings.set_index('user_id').apply(lambda x: x['embedding_vector'].split(), axis=1,
                                                           result_type='expand')
-    item_embeddings = pd.read_csv('data/business_embedding.tsv', sep='\t', nrows=1000)
+    item_embeddings = pd.read_csv('data/business_embedding.tsv', sep='\t')
     item_embeddings = item_embeddings[item_embeddings['embedding_vectors'].isnull() == False]
     item_embeddings['embedding_vectors'] = item_embeddings['embedding_vectors'].apply(
         lambda x: x.replace('\n', '').rstrip(']').lstrip('[ ') if not pd.isnull(x) else x)
