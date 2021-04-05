@@ -38,8 +38,7 @@ def TrainHybridModel():
 if __name__ == '__main__':
 
     np.random.seed(RANDOM_SEED)
-    TrainHybridModel()
-
+    # TrainHybridModel()
     recsys = RecommenderSystem('data', advanced=False, content=False, train_mode=TRAIN_MODE)
     recsys.Load()
     for learning_rate in [0.03]:
@@ -61,9 +60,9 @@ if __name__ == '__main__':
                                         'sgd step size': sgd_step_size,
                                         'latent factors': latent_factors,
                                         'iterations': n,
-                                        'last RMSE': rmse_results[-2],
+                                        # 'last RMSE': rmse_results[-2],
                                         'RMSE list': [rmse_results],
-                                        'last MAE': mae_results[-2],
+                                        # 'last MAE': mae_results[-2],
                                         'MAE list': [mae_results]},
                                        index=[0])
 
