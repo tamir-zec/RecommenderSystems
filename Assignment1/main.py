@@ -73,12 +73,12 @@ if __name__ == '__main__':
                                             },
                                            index=[0])
 
-                            if not os.path.exists(os.path.join('results')):
-                                os.makedirs(os.path.join('results'))
-                            save_result_path = os.path.join('results', 'basic_model_results.csv')
-                            if recsys.advanced:
-                                save_result_path = os.path.join('results', 'advanced_model_results.csv')
-                            if os.path.exists(save_result_path):
-                                res.to_csv(save_result_path, header=False, mode='a', index=False)
-                            else:
-                                res.to_csv(save_result_path, index=False)
+                        if not os.path.exists(os.path.join('results')):
+                            os.makedirs(os.path.join('results'))
+                        save_result_path = os.path.join('results', 'basic_model_results.csv')
+                        if recsys.advanced:
+                            save_result_path = os.path.join('results', 'advanced_model_results.csv')
+                        if os.path.exists(save_result_path):
+                            res.to_csv(save_result_path, header=False, mode='a', index=False)
+                        else:
+                            res.to_csv(save_result_path, index=False)
