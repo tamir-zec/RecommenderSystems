@@ -6,7 +6,7 @@ import pandas as pd
 from SVD_MF import RecommenderSystem
 
 RANDOM_SEED = 4
-TRAIN_MODE = False
+TRAIN_MODE = True
 
 
 def TrainHybridModel():
@@ -39,16 +39,19 @@ if __name__ == '__main__':
 
     np.random.seed(RANDOM_SEED)
     # TrainHybridModel()
-    recsys = RecommenderSystem('data', advanced=False, content=False, train_mode=TRAIN_MODE)
+    recsys = RecommenderSystem('data', advanced=True, content=False, train_mode=TRAIN_MODE)
     recsys.Load()
     for learning_rate in [0.03]:
         for sgd_step_size in [0.03]:
-            for latent_factors, rand_const in [(50, 0.1)]:  # , (100, 0.05)]:
-                for n_iter in [5]:
+            for implicit_lr in [0.01, 0.025, 0.05]:
+                for rand_const in [0.05, 0.1, 0.25, 0.5]:
+                    latent_factors = 50
+                    n_iter = 100
                     recsys.learning_rate = learning_rate
                     recsys.sgd_step_size = sgd_step_size
                     recsys.latent_factors = latent_factors
                     recsys.rand_const = rand_const
+                    recsys.implicit_learning_rate = implicit_lr
                     recsys.initialize_data()
                     if recsys.advanced:
                         rmse_results, mae_results, n = recsys.TrainAdvancedModel(n_iter)
@@ -61,9 +64,9 @@ if __name__ == '__main__':
                                         'sgd step size': sgd_step_size,
                                         'latent factors': latent_factors,
                                         'iterations': n,
-                                        'last RMSE': rmse_results[0]#rmse_results[-2],
+                                        'last RMSE': rmse_results[-2],
                                         'RMSE list': [rmse_results],
-                                        'last MAE': mae_results[0],
+                                        'last MAE': mae_results[-2],
                                         'MAE list': [mae_results]
                                         },
                                        index=[0])
