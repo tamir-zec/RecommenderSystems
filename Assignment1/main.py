@@ -55,15 +55,17 @@ if __name__ == '__main__':
                     else:
                         rmse_results, mae_results, n = recsys.TrainBaseModel(n_iter)
 
-                    print(f'{n} iterations: RMSE {rmse_results[-2]}, MAE {mae_results[-2]}')
+                    print(f'{n} iterations: RMSE {rmse_results}, MAE {mae_results}')
+                    # print(f'{n} iterations: RMSE {rmse_results[-2]}, MAE {mae_results[-2]}')
                     res = pd.DataFrame({'learning rate': learning_rate,
                                         'sgd step size': sgd_step_size,
                                         'latent factors': latent_factors,
                                         'iterations': n,
-                                        # 'last RMSE': rmse_results[-2],
+                                        'last RMSE': rmse_results[0]#rmse_results[-2],
                                         'RMSE list': [rmse_results],
-                                        # 'last MAE': mae_results[-2],
-                                        'MAE list': [mae_results]},
+                                        'last MAE': mae_results[0],
+                                        'MAE list': [mae_results]
+                                        },
                                        index=[0])
 
                     if not os.path.exists(os.path.join('results')):
