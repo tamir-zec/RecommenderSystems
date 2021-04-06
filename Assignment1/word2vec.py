@@ -158,7 +158,7 @@ def calc_user_vector(user_dict, user_average):
     return user_vector
 
 
-def calc_similarity_between_user_items(top_rec=10):
+def calc_similarity_between_user_items(top_rec=10, all_items=False):
     user_embeddings = pd.read_csv('data/users_embedding.tsv', sep='\t')
     user_embeddings['embedding_vector'] = user_embeddings['embedding_vector'].apply(
         lambda x: x.replace('\n', '').rstrip(']').lstrip('[') if not pd.isnull(x) else x)
@@ -168,36 +168,57 @@ def calc_similarity_between_user_items(top_rec=10):
     item_embeddings = item_embeddings[item_embeddings['embedding_vectors'].isnull() == False]
     item_embeddings['embedding_vectors'] = item_embeddings['embedding_vectors'].apply(
         lambda x: x.replace('\n', '').rstrip(']').lstrip('[ ') if not pd.isnull(x) else x)
-    item_mat = item_embeddings.apply(lambda x: x['embedding_vectors'].split(), axis=1, result_type='expand')
-
-    # Calculate the similarity between the user and the other items
-    with open('data/users_ratings.json', 'r') as f:
-        users_history = json.load(f)
+    item_mat = item_embeddings.set_index('business_id').apply(lambda x: x['embedding_vectors'].split(), axis=1,
+                                                              result_type='expand')
     items_names = list(item_embeddings['business_id'])
-    users_recommendations = {}
-    df_length = len(user_mat)
-    batch_size = 10000
-    num_batch = math.ceil(df_length / batch_size)
-    for batch, chunk_user in enumerate(np.array_split(user_mat, num_batch)):
-        print('Go over chunk number ' + str(batch + 1))
-        similarity_mat = cosine_similarity(chunk_user.values, item_mat.values)
-        for i, user_id in enumerate(chunk_user.index):
-            similarities = similarity_mat[i]
-            recommendations = sorted(range(len(similarities)), key=lambda k: similarities[k], reverse=True)[
-                              :top_rec + len(users_history[user_id])]
-            recommendations = [items_names[i] for i in recommendations]
-            for item in users_history[user_id]:
-                if item in recommendations:
-                    recommendations.remove(item)
-            users_recommendations[user_id] = recommendations[:top_rec]
 
-    with open('data/users_recommendations.json', 'w') as f:
-        json.dump(users_recommendations, f)
-    # res = np.around(res, decimals=4)
-    # df_mat = pd.DataFrame(res)
-    # df_mat.index = user_embeddings['user_id']
-    # df_mat.columns = item_embeddings['business_id']
-    # df_mat.to_csv('data/user_business_similarity.csv')
+    if all_items:
+        # Calculate the similarity between user and all items
+        with open('data/users_ratings.json', 'r') as f:
+            users_history = json.load(f)
+        users_recommendations = {}
+        df_length = len(user_mat)
+        batch_size = 10000
+        num_batch = math.ceil(df_length / batch_size)
+        for batch, chunk_user in enumerate(np.array_split(user_mat, num_batch)):
+            print('Go over chunk number ' + str(batch + 1))
+            similarity_mat = cosine_similarity(chunk_user.values, item_mat.values)
+            for i, user_id in enumerate(chunk_user.index):
+                similarities = similarity_mat[i]
+                recommendations = sorted(range(len(similarities)), key=lambda k: similarities[k], reverse=True)[
+                                  :top_rec + len(users_history[user_id])]
+                recommendations = [items_names[i] for i in recommendations]
+                for item in users_history[user_id]:
+                    if item in recommendations:
+                        recommendations.remove(item)
+                users_recommendations[user_id] = recommendations[:top_rec]
+
+        with open('data/users_recommendations.json', 'w') as f:
+            json.dump(users_recommendations, f)
+        # res = np.around(res, decimals=4)
+        # df_mat = pd.DataFrame(res)
+        # df_mat.index = user_embeddings['user_id']
+        # df_mat.columns = item_embeddings['business_id']
+        # df_mat.to_csv('data/user_business_similarity.csv')
+
+    else:
+        train_data = pd.read_csv('data/userTrainData.csv', usecols=['user_id', 'business_id'])
+        test_data = pd.read_csv('data/userTestData.csv', usecols=['user_id', 'business_id'])
+        train_data['sim'] = None
+        test_data['sim'] = None
+
+        for idx, row in train_data.iterrows():
+            similarity = cosine_similarity(user_mat.loc[row['user_id']].values.reshape(1, -1),
+                                           item_mat.loc[row['business_id']].values.reshape(1, -1))[0][0]
+            train_data.loc[idx]['sim'] = similarity
+        train_data.to_csv('data/userTrainDataSimilarity.csv', index=False)
+
+        for idx, row in test_data.iterrows():
+            if row['business_id'] in items_names:
+                similarity = cosine_similarity(user_mat.loc[row['user_id']].values.reshape(1, -1),
+                                               item_mat.loc[row['business_id']].values.reshape(1, -1))[0][0]
+                test_data.loc[idx]['sim'] = similarity
+        test_data.to_csv('data/userTestDataSimilarity.csv', index=False)
 
 
 def build_tfidf_w2v_vectors(vector_dim=200):
