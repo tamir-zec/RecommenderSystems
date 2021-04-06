@@ -6,7 +6,7 @@ import pandas as pd
 from SVD_MF import RecommenderSystem
 
 RANDOM_SEED = 4
-TRAIN_MODE = True
+TRAIN_MODE = False
 
 
 def TrainHybridModel():
@@ -17,10 +17,10 @@ def TrainHybridModel():
     base_model_predictions, _ = recsys1.PredictRating()
 
     recsys2 = RecommenderSystem('data', learning_rate=0.03, sgd_step_size=0.03, implicit_lrate=0.05,
-                                latent_factors=100, rand_const=0.05, advanced=True, content=False,
+                                latent_factors=50, rand_const=0.05, advanced=True, content=False,
                                 train_mode=TRAIN_MODE)
     recsys2.Load()
-    recsys2.TrainAdvancedModel(n_iter=1)
+    recsys2.TrainAdvancedModel(n_iter=4)
     advanced_model_predictions, _ = recsys2.PredictRating()
 
     recsys3 = RecommenderSystem('data', advanced=False, content=True, train_mode=TRAIN_MODE)
@@ -43,10 +43,10 @@ if __name__ == '__main__':
     recsys.Load()
     for learning_rate in [0.03]:
         for sgd_step_size in [0.03]:
-            for implicit_lr in [0.01, 0.025, 0.05]:
-                for rand_const in [0.05, 0.1, 0.25, 0.5]:
-                    for latent_factors in [50, 100]:
-                        n_iter = 100
+            for implicit_lr in [0.05]:
+                for rand_const in [0.05]:
+                    for latent_factors in [50]:
+                        n_iter = 4
                         recsys.learning_rate = learning_rate
                         recsys.sgd_step_size = sgd_step_size
                         recsys.latent_factors = latent_factors
@@ -58,17 +58,17 @@ if __name__ == '__main__':
                         else:
                             rmse_results, mae_results, n = recsys.TrainBaseModel(n_iter)
 
-                        # print(f'{n} iterations: RMSE {rmse_results}, MAE {mae_results}')
-                        print(f'{n} iterations: RMSE {rmse_results[-2]}, MAE {mae_results[-2]}')
+                        print(f'{n} iterations: RMSE {rmse_results}, MAE {mae_results}')
+                        # print(f'{n} iterations: RMSE {rmse_results[-2]}, MAE {mae_results[-2]}')
                         res = pd.DataFrame({'learning rate': learning_rate,
                                             'sgd step size': sgd_step_size,
                                             'latent factors': latent_factors,
                                             'implicit learning rate': implicit_lr,
                                             'random const': rand_const,
                                             'iterations': n,
-                                            'last RMSE': rmse_results[-2],
+                                            'last RMSE': rmse_results[0], #rmse_results[-2],
                                             'RMSE list': [rmse_results],
-                                            'last MAE': mae_results[-2],
+                                            'last MAE': mae_results[0],
                                             'MAE list': [mae_results]
                                             },
                                            index=[0])
