@@ -5,6 +5,7 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 from scipy import sparse
+from sklearn.linear_model import LinearRegression
 
 
 class RecommenderSystem:
@@ -53,6 +54,16 @@ class RecommenderSystem:
         self.ratings_matrix = sparse.csr_matrix((ratings, (np.array(users), np.array(items))),
                                                 shape=(self.total_users, self.total_items))
 
+        if self.content:
+            df_rating = pd.read_csv(load_directory, usecols=['user_id', 'business_id', 'stars'])
+            df_sim = pd.read_csv('data/userTrainDataSimilarity.csv')
+            self.train_content = pd.merge(df_rating, df_sim, on=['user_id', 'business_id'], how='left')
+
+            df_rating = pd.read_csv('data/userTestData.csv', usecols=['user_id', 'business_id', 'stars'])
+            df_sim = pd.read_csv('data/userTestDataSimilarity.csv')
+            self.test_content = pd.merge(df_rating, df_sim, on=['user_id', 'business_id'], how='left')
+            self.test_content = self.test_content[self.test_content['sim'].isnull() == False]
+
         if not self.train_mode:
             self.missing_items = []
             # Initialize test rating matrix
@@ -84,12 +95,15 @@ class RecommenderSystem:
             # if len(missing_business) > 0:
             #     pd.DataFrame(missing_business).to_csv('data/missing_business.csv', index=False, header=False)
 
-        self.initialize_data()
-
     def calc_rmse(self, ratings, predictions):
-        N = len(predictions.nonzero()[0])
-        result = (ratings - predictions).power(2)
-        result_sum = result.sum()
+        if self.content:
+            N = len(predictions)
+            result = np.power((ratings - predictions), 2)
+            result_sum = result.sum()
+        else:
+            N = len(predictions.nonzero()[0])
+            result = (ratings - predictions).power(2)
+            result_sum = result.sum()
         if not self.train_mode:
             missing_items_preds = self.calc_test_missing()
             N += len(missing_items_preds)
@@ -103,7 +117,10 @@ class RecommenderSystem:
         return np.power((ratings - missing_preds), 2)
 
     def calc_mae(self, ratings, predictions):
-        N = len(predictions.nonzero()[0])
+        if self.content:
+            N = len(predictions)
+        else:
+            N = len(predictions.nonzero()[0])
         result = np.abs(ratings - predictions)
         result_sum = result.sum()
         if not self.train_mode:
@@ -147,7 +164,7 @@ class RecommenderSystem:
     def TrainAdvancedModel(self, n_iter=20):
         rmse = []
         mae = []
-        # shuffle entries and calculate SGD for each user/item
+        # Shuffle entries and calculate SGD for each user/item
         if self.train_mode:
             sgd_indices = np.arange(len(self.train_idx_row))
         else:
@@ -170,8 +187,27 @@ class RecommenderSystem:
 
         return rmse, mae, n
 
-    def TrainContentModel(self, top_rec=10):
-        pass
+    def TrainContentModel(self):
+        rmse = []
+        mae = []
+
+        train_x = self.train_content['sim'].values.reshape(-1, 1)
+        train_y = self.train_content['stars'].values.reshape(-1, 1)
+        lr = LinearRegression()
+        lr.fit(train_x, train_y)
+        r_sq = lr.score(train_x, train_y)
+        print('R^2:', r_sq)
+        print('intercept:', lr.intercept_[0])
+        print('slope:', lr.coef_[0])
+
+        test_x = self.test_content['sim'].values.reshape(-1, 1)
+        predictions = lr.predict(test_x).squeeze()
+        ratings = self.test_content['stars'].values
+
+        rmse.append(self.calc_rmse(ratings, predictions))
+        mae.append(self.calc_mae(ratings, predictions))
+
+        return rmse, mae, None
 
     def PredictRating(self):
         model_predictions = self.calc_predictions()
