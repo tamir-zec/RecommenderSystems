@@ -33,12 +33,12 @@ def TrainHybridModel():
     recsys3.TrainContentModel()
     content_model_predictions, _ = recsys3.PredictRating()
 
-    hybrid_predictions = base_model_predictions + advanced_model_predictions + content_model_predictions / 3
+    hybrid_predictions = (base_model_predictions + advanced_model_predictions + content_model_predictions) / 3
     rmse = recsys1.calc_rmse(recsys1.ratings_matrix, hybrid_predictions)
     mae = recsys1.calc_mae(recsys1.ratings_matrix, hybrid_predictions)
 
     print(f'Hybrid Model: RMSE {rmse}, MAE {mae}')
-    res = pd.DataFrame({'weights': [1 / 3, 1 / 3, 1 / 3],
+    res = pd.DataFrame({'weights': [[1 / 3, 1 / 3, 1 / 3]],
                         'RMSE': rmse,
                         'MAE': mae
                         },
