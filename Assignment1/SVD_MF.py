@@ -331,7 +331,7 @@ class RecommenderSystem:
         return rating
 
     def calc_rating_content(self, user, item):
-        similarity = self.test_similarity_matrix[user, item]
+        similarity = self.test_similarity_matrix[user, item].reshape(-1, 1)
         rating = self.lr.predict(similarity)[0][0]
         return rating
 
