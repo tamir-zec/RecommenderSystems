@@ -59,27 +59,26 @@ class RecommenderSystem:
             df_sim = pd.read_csv('data/userTrainDataSimilarity.csv')
             self.train_content = pd.merge(df_rating, df_sim, on=['user_id', 'business_id'], how='left')
 
-            df_rating = pd.read_csv('data/userTestData.csv', usecols=['user_id', 'business_id', 'stars'])
-            df_sim = pd.read_csv('data/userTestDataSimilarity.csv')
-            self.test_content = pd.merge(df_rating, df_sim, on=['user_id', 'business_id'], how='left')
-            self.test_content = self.test_content[self.test_content['sim'].isnull() == False]
-
         if not self.train_mode:
             self.missing_items = []
             # Initialize test rating matrix
-            load_directory = os.path.join(os.path.dirname(os.path.realpath(__file__)), self.data_path,
-                                          'userTestData.csv')
             missing_business = []
             missing_users = []
-            test_ratings, test_users, test_items = [], [], []
-            for df in pd.read_csv(load_directory, chunksize=100000, usecols=['user_id', 'business_id', 'stars']):
-                for _, row in df.iterrows():
+            test_ratings, test_users, test_items, test_similarities = [], [], [], []
+
+            chunk_size = 100000
+            test_content = pd.read_csv('data/userTestDataSimilarity.csv')
+            for df in pd.read_csv('data/userTestData.csv', chunksize=chunk_size, usecols=['user_id', 'business_id', 'stars']):
+                df = pd.merge(df, test_content, on=['user_id', 'business_id'], how='left')
+                for idx, row in df.iterrows():
                     if row['user_id'] in self.user2idx and row['business_id'] in self.item2idx:
                         u_id = self.user2idx[row['user_id']]
                         i_id = self.item2idx[row['business_id']]
                         test_ratings.append(row['stars'])
                         test_users.append(u_id)
                         test_items.append(i_id)
+                        if self.content:
+                            test_similarities.append(row['sim'])
                     else:
                         if row['user_id'] not in self.user2idx:
                             missing_users.append(row['user_id'])
@@ -88,8 +87,13 @@ class RecommenderSystem:
                         self.missing_items.append((row['user_id'], row['business_id'], row['stars']))
                         continue
 
+
             self.test_ratings_matrix = sparse.csr_matrix((test_ratings, (np.array(test_users), np.array(test_items))),
                                                          shape=(self.total_users, self.total_items))
+            if self.content:
+                self.test_similarity_matrix = sparse.csr_matrix(
+                    (test_similarities, (np.array(test_users), np.array(test_items))),
+                    shape=(self.total_users, self.total_items))
             # if len(missing_users) > 0:
             #     pd.DataFrame(missing_users).to_csv('data/missing_users.csv', index=False, header=False)
             # if len(missing_business) > 0:
@@ -327,11 +331,7 @@ class RecommenderSystem:
         return rating
 
     def calc_rating_content(self, user, item):
-        user_id = self.idx2user[user]
-        item_id = self.idx2item[item]
-        similarity = \
-        self.test_content[(self.test_content['user_id'] == user_id) & (self.test_content['business_id'] == item_id)][
-            'sim'].values.reshape(-1, 1)
+        similarity = self.test_similarity_matrix[user, item]
         rating = self.lr.predict(similarity)[0][0]
         return rating
 
