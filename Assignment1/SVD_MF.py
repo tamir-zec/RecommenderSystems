@@ -1,4 +1,3 @@
-import json
 import os
 from collections import defaultdict
 
@@ -45,6 +44,7 @@ class RecommenderSystem:
         self.user2idx = {user: idx for idx, user in enumerate(np.unique(users))}
         self.idx2user = {idx: user for user, idx in self.user2idx.items()}
         self.item2idx = {item: idx for idx, item in enumerate(np.unique(items))}
+        self.idx2item = {idx: item for item, idx in self.item2idx.items()}
         map_users = lambda x: self.user2idx[x]
         map_items = lambda x: self.item2idx[x]
         # Convert ids to indices
@@ -96,14 +96,9 @@ class RecommenderSystem:
             #     pd.DataFrame(missing_business).to_csv('data/missing_business.csv', index=False, header=False)
 
     def calc_rmse(self, ratings, predictions):
-        if self.content:
-            N = len(predictions)
-            result = np.power((ratings - predictions), 2)
-            result_sum = result.sum()
-        else:
-            N = len(predictions.nonzero()[0])
-            result = (ratings - predictions).power(2)
-            result_sum = result.sum()
+        N = len(predictions.nonzero()[0])
+        result = (ratings - predictions).power(2)
+        result_sum = result.sum()
         if not self.train_mode:
             missing_items_preds = self.calc_test_missing()
             N += len(missing_items_preds)
@@ -117,10 +112,7 @@ class RecommenderSystem:
         return np.power((ratings - missing_preds), 2)
 
     def calc_mae(self, ratings, predictions):
-        if self.content:
-            N = len(predictions)
-        else:
-            N = len(predictions.nonzero()[0])
+        N = len(predictions.nonzero()[0])
         result = np.abs(ratings - predictions)
         result_sum = result.sum()
         if not self.train_mode:
@@ -193,19 +185,16 @@ class RecommenderSystem:
 
         train_x = self.train_content['sim'].values.reshape(-1, 1)
         train_y = self.train_content['stars'].values.reshape(-1, 1)
-        lr = LinearRegression()
-        lr.fit(train_x, train_y)
-        r_sq = lr.score(train_x, train_y)
+        self.lr = LinearRegression()
+        self.lr.fit(train_x, train_y)
+        r_sq = self.lr.score(train_x, train_y)
         print('R^2:', r_sq)
-        print('intercept:', lr.intercept_[0])
-        print('slope:', lr.coef_[0])
+        print('intercept:', self.lr.intercept_[0])
+        print('slope:', self.lr.coef_[0])
 
-        test_x = self.test_content['sim'].values.reshape(-1, 1)
-        predictions = lr.predict(test_x).squeeze()
-        ratings = self.test_content['stars'].values
-
-        rmse.append(self.calc_rmse(ratings, predictions))
-        mae.append(self.calc_mae(ratings, predictions))
+        predictions = self.calc_predictions()
+        rmse.append(self.calc_rmse(self.test_ratings_matrix, predictions))
+        mae.append(self.calc_mae(self.test_ratings_matrix, predictions))
 
         return rmse, mae, None
 
@@ -338,11 +327,13 @@ class RecommenderSystem:
         return rating
 
     def calc_rating_content(self, user, item):
-        # todo: implement
-
-        with open('data/users_recommendations.json', 'r') as f:
-            users_recommendations = json.load(f)
-        pass
+        user_id = self.idx2user[user]
+        item_id = self.idx2item[item]
+        similarity = \
+        self.test_content[(self.test_content['user_id'] == user_id) & (self.test_content['business_id'] == item_id)][
+            'sim'].values.reshape(-1, 1)
+        rating = self.lr.predict(similarity)[0][0]
+        return rating
 
     def calc_rating(self, user, item):
         if self.advanced:

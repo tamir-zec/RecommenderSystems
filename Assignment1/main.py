@@ -38,12 +38,23 @@ def TrainHybridModel():
     mae = recsys1.calc_mae(recsys1.ratings_matrix, hybrid_predictions)
 
     print(f'Hybrid Model: RMSE {rmse}, MAE {mae}')
+    res = pd.DataFrame({'weights': [1 / 3, 1 / 3, 1 / 3],
+                        'RMSE': rmse,
+                        'MAE': mae
+                        },
+                       index=[0])
+    save_result_path = os.path.join('results', 'hybrid_model_results.csv')
+    if os.path.exists(save_result_path):
+        res.to_csv(save_result_path, header=False, mode='a', index=False)
+    else:
+        res.to_csv(save_result_path, index=False)
 
 
 if __name__ == '__main__':
 
     np.random.seed(RANDOM_SEED)
     # TrainHybridModel()
+
     recsys = RecommenderSystem('data', advanced=False, content=True, train_mode=TRAIN_MODE)
     recsys.Load()
     for learning_rate in [0.03]:
@@ -74,7 +85,7 @@ if __name__ == '__main__':
                                 # 'implicit learning rate': implicit_lr,
                                 # 'random const': rand_const,
                                 'iterations': n,
-                                'last RMSE': rmse_results[0], #rmse_results[-2],
+                                'last RMSE': rmse_results[0],  # rmse_results[-2],
                                 'RMSE list': [rmse_results],
                                 'last MAE': mae_results[0],
                                 'MAE list': [mae_results]
