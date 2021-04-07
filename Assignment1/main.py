@@ -53,53 +53,53 @@ def TrainHybridModel():
 if __name__ == '__main__':
 
     np.random.seed(RANDOM_SEED)
-    # TrainHybridModel()
+    TrainHybridModel()
 
-    recsys = RecommenderSystem('data', advanced=False, content=True, train_mode=TRAIN_MODE)
-    recsys.Load()
-    for learning_rate in [0.03]:
-        for sgd_step_size in [0.03]:
-            # for implicit_lr in [0.05]:
-            #     for rand_const in [0.05]:
-            latent_factors = 50
-            n_iter = 4
-            recsys.learning_rate = learning_rate
-            recsys.sgd_step_size = sgd_step_size
-            recsys.latent_factors = latent_factors
-            # recsys.rand_const = rand_const
-            # recsys.implicit_learning_rate = implicit_lr
-            if recsys.advanced:
-                recsys.initialize_data()
-                rmse_results, mae_results, n = recsys.TrainAdvancedModel(n_iter)
-            elif recsys.content:
-                rmse_results, mae_results, n = recsys.TrainContentModel()
-            else:
-                recsys.initialize_data()
-                rmse_results, mae_results, n = recsys.TrainBaseModel(n_iter)
-
-            print(f'{n} iterations: RMSE {rmse_results}, MAE {mae_results}')
-            # print(f'{n} iterations: RMSE {rmse_results[-2]}, MAE {mae_results[-2]}')
-            res = pd.DataFrame({'learning rate': learning_rate,
-                                'sgd step size': sgd_step_size,
-                                'latent factors': latent_factors,
-                                # 'implicit learning rate': implicit_lr,
-                                # 'random const': rand_const,
-                                'iterations': n,
-                                'last RMSE': rmse_results[0],  # rmse_results[-2],
-                                'RMSE list': [rmse_results],
-                                'last MAE': mae_results[0],
-                                'MAE list': [mae_results]
-                                },
-                               index=[0])
-
-            if not os.path.exists(os.path.join('results')):
-                os.makedirs(os.path.join('results'))
-            save_result_path = os.path.join('results', 'basic_model_results.csv')
-            if recsys.advanced:
-                save_result_path = os.path.join('results', 'advanced_model_results.csv')
-            elif recsys.content:
-                save_result_path = os.path.join('results', 'content_model_results.csv')
-            if os.path.exists(save_result_path):
-                res.to_csv(save_result_path, header=False, mode='a', index=False)
-            else:
-                res.to_csv(save_result_path, index=False)
+    # recsys = RecommenderSystem('data', advanced=False, content=True, train_mode=TRAIN_MODE)
+    # recsys.Load()
+    # for learning_rate in [0.03]:
+    #     for sgd_step_size in [0.03]:
+    #         # for implicit_lr in [0.05]:
+    #         #     for rand_const in [0.05]:
+    #         latent_factors = 50
+    #         n_iter = 4
+    #         recsys.learning_rate = learning_rate
+    #         recsys.sgd_step_size = sgd_step_size
+    #         recsys.latent_factors = latent_factors
+    #         # recsys.rand_const = rand_const
+    #         # recsys.implicit_learning_rate = implicit_lr
+    #         if recsys.advanced:
+    #             recsys.initialize_data()
+    #             rmse_results, mae_results, n = recsys.TrainAdvancedModel(n_iter)
+    #         elif recsys.content:
+    #             rmse_results, mae_results, n = recsys.TrainContentModel()
+    #         else:
+    #             recsys.initialize_data()
+    #             rmse_results, mae_results, n = recsys.TrainBaseModel(n_iter)
+    #
+    #         print(f'{n} iterations: RMSE {rmse_results}, MAE {mae_results}')
+    #         # print(f'{n} iterations: RMSE {rmse_results[-2]}, MAE {mae_results[-2]}')
+    #         res = pd.DataFrame({'learning rate': learning_rate,
+    #                             'sgd step size': sgd_step_size,
+    #                             'latent factors': latent_factors,
+    #                             # 'implicit learning rate': implicit_lr,
+    #                             # 'random const': rand_const,
+    #                             'iterations': n,
+    #                             'last RMSE': rmse_results[0],  # rmse_results[-2],
+    #                             'RMSE list': [rmse_results],
+    #                             'last MAE': mae_results[0],
+    #                             'MAE list': [mae_results]
+    #                             },
+    #                            index=[0])
+    #
+    #         if not os.path.exists(os.path.join('results')):
+    #             os.makedirs(os.path.join('results'))
+    #         save_result_path = os.path.join('results', 'basic_model_results.csv')
+    #         if recsys.advanced:
+    #             save_result_path = os.path.join('results', 'advanced_model_results.csv')
+    #         elif recsys.content:
+    #             save_result_path = os.path.join('results', 'content_model_results.csv')
+    #         if os.path.exists(save_result_path):
+    #             res.to_csv(save_result_path, header=False, mode='a', index=False)
+    #         else:
+    #             res.to_csv(save_result_path, index=False)
