@@ -169,7 +169,7 @@ class RecommenderSystem:
             predictions = self.calc_predictions()
             rmse.append(self.calc_rmse(self.test_ratings_matrix, predictions))
             mae.append(self.calc_mae(self.test_ratings_matrix, predictions))
-            
+
         # to remove #
         return val_rmse, val_mae, train_rmse, train_mae, n
         # to remove #
