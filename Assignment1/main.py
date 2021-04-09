@@ -136,7 +136,7 @@ if __name__ == '__main__':
 
     paths = [train_save_result_path, val_save_result_path, trainAdv_save_result_path, valAdv_save_result_path]
     results = [base_res_train, base_res_val, advanced_res_train, advanced_res_val]
-    for path, result in zip(paths,results):
+    for path, result in zip(paths, results):
         if os.path.exists(path):
             result.to_csv(path, header=False, mode='a', index=False)
     else:
