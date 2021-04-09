@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
     recsys_svdpp.Load()
     recsys_svdpp.initialize_data()
-    rrmse_results_val_pp, mae_results_val_pp, rmse_results_train_pp, mae_results_train_pp, n_pp = recsys_svd.TrainAdvancedModel(n_iter)
+    rmse_results_val_pp, mae_results_val_pp, rmse_results_train_pp, mae_results_train_pp, n_pp = recsys_svd.TrainAdvancedModel(n_iter)
 
     base_res_train = pd.DataFrame({'learning rate': learning_rate,
                         'sgd step size': sgd_step_size,
