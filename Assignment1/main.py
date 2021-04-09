@@ -59,9 +59,9 @@ def TrainHybridModel():
 
 if __name__ == '__main__':
 
+    np.random.seed(RANDOM_SEED)
     TrainHybridModel()
-
-    # np.random.seed(RANDOM_SEED)
+    
     # learning_rate = 0.03
     # sgd_step_size = 0.03
     # implicit_lr = 0.05
