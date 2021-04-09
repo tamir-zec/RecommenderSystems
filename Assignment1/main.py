@@ -15,8 +15,11 @@ def TrainHybridModel():
                                 rand_const=0.1, advanced=False, content=False, train_mode=TRAIN_MODE)
     recsys1.Load()
     recsys1.initialize_data()
-    recsys1.TrainBaseModel(n_iter=5)
+    recsys1.TrainBaseModel(n_iter=7)
     base_model_predictions, _ = recsys1.PredictRating()
+    # toDO: remove
+    print("RMSE for Base" + str(recsys1.calc_rmse(recsys1.test_ratings_matrix,base_model_predictions)))
+    print("MAE for Base" + str(recsys1.calc_mae(recsys1.test_ratings_matrix, base_model_predictions)))
 
     # Initialize advanced model
     recsys2 = RecommenderSystem('data', learning_rate=0.03, sgd_step_size=0.03, implicit_lrate=0.05,
@@ -24,14 +27,20 @@ def TrainHybridModel():
                                 train_mode=TRAIN_MODE)
     recsys2.Load()
     recsys2.initialize_data()
-    recsys2.TrainAdvancedModel(n_iter=4)
+    recsys2.TrainAdvancedModel(n_iter=7)
     advanced_model_predictions, _ = recsys2.PredictRating()
+    # toDO: remove
+    print("RMSE for SVD++" + str(recsys1.calc_rmse(recsys1.test_ratings_matrix, advanced_model_predictions)))
+    print("MAE for SVD++" + str(recsys1.calc_mae(recsys1.test_ratings_matrix, advanced_model_predictions)))
 
     # Initialize content model
     recsys3 = RecommenderSystem('data', advanced=False, content=True, train_mode=TRAIN_MODE)
     recsys3.Load()
     recsys3.TrainContentModel()
     content_model_predictions, _ = recsys3.PredictRating()
+    # toDO: remove
+    print("RMSE for content regression" + str(recsys1.calc_rmse(recsys1.test_ratings_matrix, content_model_predictions)))
+    print("MAE for content regression" + str(recsys1.calc_mae(recsys1.test_ratings_matrix, content_model_predictions)))
 
     for weights in [[1 / 3, 1 / 3, 1 / 3], [0.5, 0.3, 0.2], [0.5, 0.4, 0.1], [0.4, 0.4, 0.2]]:
         hybrid_predictions = (weights[0] * base_model_predictions +
