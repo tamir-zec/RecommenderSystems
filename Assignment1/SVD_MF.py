@@ -68,7 +68,8 @@ class RecommenderSystem:
 
             chunk_size = 100000
             test_content = pd.read_csv('data/userTestDataSimilarity.csv')
-            for df in pd.read_csv('data/userTestData.csv', chunksize=chunk_size, usecols=['user_id', 'business_id', 'stars']):
+            for df in pd.read_csv('data/userTestData.csv', chunksize=chunk_size,
+                                  usecols=['user_id', 'business_id', 'stars']):
                 df = pd.merge(df, test_content, on=['user_id', 'business_id'], how='left')
                 for idx, row in df.iterrows():
                     if row['user_id'] in self.user2idx and row['business_id'] in self.item2idx:
@@ -86,7 +87,6 @@ class RecommenderSystem:
                             missing_business.append(row['business_id'])
                         self.missing_items.append((row['user_id'], row['business_id'], row['stars']))
                         continue
-
 
             self.test_ratings_matrix = sparse.csr_matrix((test_ratings, (np.array(test_users), np.array(test_items))),
                                                          shape=(self.total_users, self.total_items))
@@ -134,14 +134,6 @@ class RecommenderSystem:
     def TrainBaseModel(self, n_iter=20):
         rmse = []
         mae = []
-
-        # to remove #
-        train_rmse = []
-        train_mae = []
-        val_rmse = []
-        val_mae = []
-        # to remove #
-
         # Shuffle entries and calculate SGD for each user/item
         if self.train_mode:
             sgd_indices = np.arange(len(self.train_idx_row))
@@ -154,13 +146,6 @@ class RecommenderSystem:
                 predictions = self.calc_predictions()
                 rmse.append(self.calc_rmse(self.val_rating_matrix, predictions))
                 mae.append(self.calc_mae(self.val_rating_matrix, predictions))
-                # to remove #
-                val_rmse.append(self.calc_rmse(self.val_rating_matrix, predictions))
-                val_mae.append(self.calc_mae(self.val_rating_matrix, predictions))
-                train_predictions = self.calc_train_set_predictions()
-                train_rmse.append(self.calc_rmse(self.train_ratings_matrix, train_predictions))
-                train_mae.append(self.calc_mae(self.train_ratings_matrix, train_predictions))
-                # to remove #
                 # Stop rule
                 if len(rmse) > 1 and (rmse[-1] > rmse[-2] or mae[-1] > mae[-2]):
                     break
@@ -170,24 +155,11 @@ class RecommenderSystem:
             rmse.append(self.calc_rmse(self.test_ratings_matrix, predictions))
             mae.append(self.calc_mae(self.test_ratings_matrix, predictions))
 
-        # to remove #
-        return val_rmse, val_mae, train_rmse, train_mae, n
-        # to remove #
-
-        # toDO: insert back
-        # return rmse, mae, n
+        return rmse, mae, n
 
     def TrainAdvancedModel(self, n_iter=20):
         rmse = []
         mae = []
-
-        # to remove #
-        train_rmse = []
-        train_mae = []
-        val_rmse = []
-        val_mae = []
-        # to remove #
-
         # Shuffle entries and calculate SGD for each user/item
         if self.train_mode:
             sgd_indices = np.arange(len(self.train_idx_row))
@@ -200,15 +172,6 @@ class RecommenderSystem:
                 predictions = self.calc_predictions()
                 rmse.append(self.calc_rmse(self.val_rating_matrix, predictions))
                 mae.append(self.calc_mae(self.val_rating_matrix, predictions))
-
-                # to remove #
-                val_rmse.append(self.calc_rmse(self.val_rating_matrix, predictions))
-                val_mae.append(self.calc_mae(self.val_rating_matrix, predictions))
-                train_predictions = self.calc_train_set_predictions()
-                train_rmse.append(self.calc_rmse(self.train_ratings_matrix, train_predictions))
-                train_mae.append(self.calc_mae(self.train_ratings_matrix, train_predictions))
-                # to remove #
-
                 # Stop rule
                 if len(rmse) > 1 and (rmse[-1] > rmse[-2] or mae[-1] > mae[-2]):
                     break
@@ -218,12 +181,7 @@ class RecommenderSystem:
             rmse.append(self.calc_rmse(self.test_ratings_matrix, predictions))
             mae.append(self.calc_mae(self.test_ratings_matrix, predictions))
 
-        # to remove #
-        return val_rmse, val_mae, train_rmse, train_mae, n
-        # to remove #
-
-        # toDO: insert back
-        # return rmse, mae, n
+        return rmse, mae, n
 
     def TrainContentModel(self):
         rmse = []
@@ -375,6 +333,12 @@ class RecommenderSystem:
     def calc_rating_content(self, user, item):
         similarity = self.test_similarity_matrix[user, item].reshape(-1, 1)
         rating = self.lr.predict(similarity)[0][0]
+        if rating < 1:
+            print(rating)
+            rating = 1
+        elif rating > 5:
+            print(rating)
+            rating = 5
         return rating
 
     def calc_rating(self, user, item):
@@ -403,16 +367,6 @@ class RecommenderSystem:
 
     def calc_train_predictions(self):
         row_idx, col_idx = self.val_rating_matrix.nonzero()
-        data = []
-        for u_id, i_id in zip(row_idx, col_idx):
-            prediction = self.calc_rating(u_id, i_id)
-            data.append(prediction)
-
-        predictions = sparse.csr_matrix((data, (row_idx, col_idx)), shape=(self.total_users, self.total_items))
-        return predictions
-
-    def calc_train_set_predictions(self):
-        row_idx, col_idx = self.train_ratings_matrix.nonzero()
         data = []
         for u_id, i_id in zip(row_idx, col_idx):
             prediction = self.calc_rating(u_id, i_id)
