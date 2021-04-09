@@ -134,6 +134,14 @@ class RecommenderSystem:
     def TrainBaseModel(self, n_iter=20):
         rmse = []
         mae = []
+
+        # to remove #
+        train_rmse = []
+        train_mae = []
+        val_rmse = []
+        val_mae = []
+        # to remove #
+
         # Shuffle entries and calculate SGD for each user/item
         if self.train_mode:
             sgd_indices = np.arange(len(self.train_idx_row))
@@ -146,6 +154,13 @@ class RecommenderSystem:
                 predictions = self.calc_predictions()
                 rmse.append(self.calc_rmse(self.val_rating_matrix, predictions))
                 mae.append(self.calc_mae(self.val_rating_matrix, predictions))
+                ## to remove ##
+                val_rmse.append(self.calc_rmse(self.val_rating_matrix, predictions))
+                val_mae.append(self.calc_mae(self.val_rating_matrix, predictions))
+                train_predictions = self.calc_train_set_predictions()
+                train_rmse.append(self.calc_rmse(self.train_ratings_matrix, train_predictions))
+                train_mae.append(self.calc_mae(self.train_ratings_matrix, train_predictions))
+                ## to remove ##
                 # Stop rule
                 if len(rmse) > 1 and (rmse[-1] > rmse[-2] or mae[-1] > mae[-2]):
                     break
@@ -154,8 +169,13 @@ class RecommenderSystem:
             predictions = self.calc_predictions()
             rmse.append(self.calc_rmse(self.test_ratings_matrix, predictions))
             mae.append(self.calc_mae(self.test_ratings_matrix, predictions))
+            
+        # to remove #
+        return val_rmse, val_mae, train_rmse, train_mae, n
+        # to remove #
 
-        return rmse, mae, n
+        # toDO: insert back
+        # return rmse, mae, n
 
     def TrainAdvancedModel(self, n_iter=20):
         rmse = []
@@ -361,6 +381,16 @@ class RecommenderSystem:
 
     def calc_train_predictions(self):
         row_idx, col_idx = self.val_rating_matrix.nonzero()
+        data = []
+        for u_id, i_id in zip(row_idx, col_idx):
+            prediction = self.calc_rating(u_id, i_id)
+            data.append(prediction)
+
+        predictions = sparse.csr_matrix((data, (row_idx, col_idx)), shape=(self.total_users, self.total_items))
+        return predictions
+
+    def calc_train_set_predictions(self):
+        row_idx, col_idx = self.train_ratings_matrix.nonzero()
         data = []
         for u_id, i_id in zip(row_idx, col_idx):
             prediction = self.calc_rating(u_id, i_id)
