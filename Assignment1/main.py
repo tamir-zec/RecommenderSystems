@@ -105,10 +105,10 @@ if __name__ == '__main__':
                                    'implicit learning rate': implicit_lr,
                                    'random const': rand_const_advanced,
                                    'iterations': n,
-                                   'last RMSE': rmse_results_train[-2],
-                                   'RMSE list': [rmse_results_train],
-                                   'last MAE': mae_results_train[-2],
-                                   'MAE list': [mae_results_train]
+                                   'last RMSE': rmse_results_train_pp[-2],
+                                   'RMSE list': [rmse_results_train_pp],
+                                   'last MAE': mae_results_train_pp[-2],
+                                   'MAE list': [mae_results_train_pp]
                                    },
                                   index=[0])
 
@@ -118,10 +118,10 @@ if __name__ == '__main__':
                                        'implicit learning rate': implicit_lr,
                                        'random const': rand_const_advanced,
                                        'iterations': n,
-                                       'last RMSE': rmse_results_train[-2],
-                                       'RMSE list': [rmse_results_train],
-                                       'last MAE': mae_results_train[-2],
-                                       'MAE list': [mae_results_train]
+                                       'last RMSE': rrmse_results_val_pp[-2],
+                                       'RMSE list': [rrmse_results_val_pp],
+                                       'last MAE': mae_results_val_pp[-2],
+                                       'MAE list': [mae_results_val_pp]
                                        },
                                       index=[0])
 
