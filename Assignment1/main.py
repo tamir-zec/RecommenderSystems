@@ -6,8 +6,8 @@ import pandas as pd
 from SVD_MF import RecommenderSystem
 
 RANDOM_SEED = 4
-HYBRID = True
-TRAIN_MODE = False
+HYBRID = False
+TRAIN_MODE = True
 LEARNING_RATE = 0.03
 SGD_STEP_SIZE = 0.03
 IMPLICIT_LEARNING_RATE = 0.05
@@ -40,17 +40,27 @@ def TrainHybridModel():
     recsys3.TrainContentModel()
     content_model_predictions, _ = recsys3.PredictRating()
 
-    for weights in [[1 / 3, 1 / 3, 1 / 3], [0.5, 0.3, 0.2], [0.5, 0.4, 0.1], [0.4, 0.4, 0.2]]:
-        hybrid_predictions = weights[0] * base_model_predictions + weights[1] * advanced_model_predictions + weights[
-            2] * content_model_predictions
-        # if TRAIN_MODE:
-        #     rmse = recsys1.calc_rmse(recsys1.val_rating_matrix, hybrid_predictions)
-        #     mae = recsys1.calc_mae(recsys1.val_rating_matrix, hybrid_predictions)
-        # else:
+    weights = [0.5, 0.4, 0.1]
+    hybrid_predictions = (weights[0] * base_model_predictions +
+                          weights[1] * advanced_model_predictions +
+                          weights[2] * content_model_predictions)
+    if TRAIN_MODE:
+        rmse = recsys1.calc_rmse(recsys1.val_rating_matrix, hybrid_predictions)
+        mae = recsys1.calc_mae(recsys1.val_rating_matrix, hybrid_predictions)
+    else:
         rmse = recsys1.calc_rmse(recsys1.test_ratings_matrix, hybrid_predictions)
         mae = recsys1.calc_mae(recsys1.test_ratings_matrix, hybrid_predictions)
-        res = pd.DataFrame({'weights': weights,
-                            'RMSE': rmse,
+
+    return rmse, mae, weights
+
+
+if __name__ == '__main__':
+
+    np.random.seed(RANDOM_SEED)
+    if HYBRID:
+        rmse, mae, _ = TrainHybridModel()
+        print(f'Hybrid Model: RMSE {rmse}, MAE {mae}')
+        res = pd.DataFrame({'RMSE': rmse,
                             'MAE': mae
                             },
                            index=[0])
@@ -59,27 +69,6 @@ def TrainHybridModel():
             res.to_csv(save_result_path, header=False, mode='a', index=False)
         else:
             res.to_csv(save_result_path, index=False)
-
-    # return rmse, mae
-
-
-if __name__ == '__main__':
-
-    np.random.seed(RANDOM_SEED)
-    if HYBRID:
-        TrainHybridModel()
-    #     rmse, mae = TrainHybridModel()
-    #     print(f'Hybrid Model: RMSE {rmse}, MAE {mae}')
-    #     res = pd.DataFrame({'weights': weights,
-    #                         'RMSE': rmse,
-    #                         'MAE': mae
-    #                         },
-    #                        index=[0])
-    #     save_result_path = os.path.join('results', 'hybrid_model_results.csv')
-    #     if os.path.exists(save_result_path):
-    #         res.to_csv(save_result_path, header=False, mode='a', index=False)
-    #     else:
-    #         res.to_csv(save_result_path, index=False)
 
     else:
         recsys = RecommenderSystem('data', advanced=False, content=True, train_mode=TRAIN_MODE)
