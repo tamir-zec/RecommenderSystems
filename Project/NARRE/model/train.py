@@ -19,7 +19,7 @@ import tensorflow as tf
 
 import NARRE
 
-# Model Hyperparameters
+# Model Hyper parameters
 tf.compat.v1.flags.DEFINE_integer("embedding_dim", 300, "Dimensionality of character embedding ")
 tf.compat.v1.flags.DEFINE_string("filter_sizes", "3", "Comma-separated filter sizes")
 tf.compat.v1.flags.DEFINE_integer("num_filters", 100, "Number of filters per filter size")
@@ -121,10 +121,10 @@ if __name__ == '__main__':
         np.random.seed(random_seed)
         print(f'user_num: {user_num}')
         print(f'item_num: {item_num}')
-        print(review_num_u)
-        print(review_len_u)
-        print(review_num_i)
-        print(review_len_i)
+        print(f'review_num_u: {review_num_u}')
+        print(f'review_len_u: {review_len_u}')
+        print(f'review_num_i: {review_num_i}')
+        print(f'review_len_i: {review_len_i}')
 
         with tf.compat.v1.Graph().as_default():
             session_conf = tf.compat.v1.ConfigProto(
