@@ -22,7 +22,8 @@ def train(model, criterion, optimizer, reader, hyper_params):
         # Forward pass
         all_output = model(data)
         # Backward pass
-        loss = criterion(all_output, y, return_mean=False)
+        # loss = criterion(all_output, y, return_mean=False)
+        loss = criterion(all_output, y)
         metrics['RMSE'] += float(torch.sum(loss.data))
         loss = torch.mean(loss)
         loss.backward()
