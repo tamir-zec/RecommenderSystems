@@ -17,26 +17,24 @@ def evaluate(model, criterion, reader, hyper_params, user_count, item_count, rev
 
             output = model(data)
             rmse = criterion(output, y).data
-            print(rmse(type))
-            print(rmse)
             total_temp += torch.sum(rmse)
             try:
                 total_temp2 += float(int(output.shape[0]))
             except:
                 total_temp2 += float(int(output[0].shape[0]))  # Transnets
 
-            for batch in range(int(y.shape[0])):
-                user_id = int(user[batch])
-                item_id = int(item[batch])
-
-                if user_id not in user_count: user_count[user_id] = 0
-                if item_id not in item_count: item_count[item_id] = 0
-
-                if user_count[user_id] not in user_count_mse_map: user_count_mse_map[user_count[user_id]] = []
-                if item_count[item_id] not in item_count_mse_map: item_count_mse_map[item_count[item_id]] = []
-
-                user_count_mse_map[user_count[user_id]].append(float(rmse[batch]))
-                item_count_mse_map[item_count[item_id]].append(float(rmse[batch]))
+            # for batch in range(int(y.shape[0])):
+            #     user_id = int(user[batch])
+            #     item_id = int(item[batch])
+            #
+            #     if user_id not in user_count: user_count[user_id] = 0
+            #     if item_id not in item_count: item_count[item_id] = 0
+            #
+            #     if user_count[user_id] not in user_count_mse_map: user_count_mse_map[user_count[user_id]] = []
+            #     if item_count[item_id] not in item_count_mse_map: item_count_mse_map[item_count[item_id]] = []
+            #
+            #     user_count_mse_map[user_count[user_id]].append(float(rmse[batch]))
+            #     item_count_mse_map[item_count[item_id]].append(float(rmse[batch]))
 
             total_batches += 1.0
 
