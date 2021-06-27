@@ -150,7 +150,7 @@ def main_pytorch(hyper_params, gpu_id=None):
 
     # Calculating HR@1 on test-set
     _, test_reader2, _, _ = load_data(hyper_params)  # Needs default slow reader
-    metrics.update(eval_ranking(model, test_reader2, hyper_params, review=review_based_model))
+    # metrics.update(eval_ranking(model, test_reader2, hyper_params, review=review_based_model))
 
     log_end_epoch(hyper_params, metrics, 'final', time.time() - start_time, metrics_on='(TEST)')
 
