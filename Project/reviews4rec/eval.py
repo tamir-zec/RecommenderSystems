@@ -16,7 +16,7 @@ def evaluate(model, criterion, reader, hyper_params, user_count, item_count, rev
             _, _, _, _, _, user, item = data
 
             output = model(data)
-            rmse = criterion(output, y, return_mean=False).data
+            rmse = criterion(output, y).data
             total_temp += torch.sum(rmse)
             try:
                 total_temp2 += float(int(output.shape[0]))
