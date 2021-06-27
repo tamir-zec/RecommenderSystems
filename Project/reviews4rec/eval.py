@@ -33,8 +33,8 @@ def evaluate(model, criterion, reader, hyper_params, user_count, item_count, rev
                 if user_count[user_id] not in user_count_mse_map: user_count_mse_map[user_count[user_id]] = []
                 if item_count[item_id] not in item_count_mse_map: item_count_mse_map[item_count[item_id]] = []
 
-                user_count_mse_map[user_count[user_id]].append(float(rmse[batch]))
-                item_count_mse_map[item_count[item_id]].append(float(rmse[batch]))
+                user_count_mse_map[user_count[user_id]].append(float(rmse[batch].item()))
+                item_count_mse_map[item_count[item_id]].append(float(rmse[batch].item()))
 
             total_batches += 1.0
 
