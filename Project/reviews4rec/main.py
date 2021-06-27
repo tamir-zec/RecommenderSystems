@@ -8,12 +8,9 @@ def train(model, criterion, optimizer, reader, hyper_params):
     import torch
 
     model.train()
-    # Initializing metrics since we will calculate MSE on the train set on the fly
+    # Initializing metrics since we will calculate RMSE on the train set on the fly
     metrics = {}
-    metrics['MSE'] = 0.0
-    if hyper_params['model_type'] in ['transnet', 'transnet++']:
-        metrics['MSE_target'], metrics['MSE_transform'] = 0.0, 0.0
-
+    metrics['RMSE'] = 0.0
     # Initializations
     total_x, total_batches = 0.0, 0.0
 
@@ -26,7 +23,7 @@ def train(model, criterion, optimizer, reader, hyper_params):
         all_output = model(data)
         # Backward pass
         loss = criterion(all_output, y, return_mean=False)
-        metrics['MSE'] += float(torch.sum(loss.data))
+        metrics['RMSE'] += float(torch.sum(loss.data))
         loss = torch.mean(loss)
         loss.backward()
         optimizer.step()
@@ -70,7 +67,7 @@ def train_complete(hyper_params, Model, train_reader, val_reader, user_count, it
             metrics['dataset'] = hyper_params['dataset']
             # log_end_epoch(hyper_params, metrics, epoch, time.time() - epoch_start_time, metrics_on = '(TRAIN)')
 
-            # Calulating the metrics on the validation set
+            # Calculating the metrics on the validation set
             metrics, _, _ = evaluate(
                 model, criterion, val_reader, hyper_params,
                 user_count, item_count, review=review
@@ -142,7 +139,7 @@ def main_pytorch(hyper_params, gpu_id=None):
         val_reader, user_count, item_count, model, review=review_based_model
     )
 
-    # Calculating MSE on test-set
+    # Calculating RMSE on test-set
     # criterion = MSELoss()
     criterion = RMSELoss()
     metrics, user_count_mse_map, item_count_mse_map = evaluate(
