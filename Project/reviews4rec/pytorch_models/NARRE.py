@@ -13,7 +13,7 @@ class NARRE(nn.Module):
         # word_vectors = load_obj(hyper_params['data_dir'] + '/word2vec')
         # self.word2vec = nn.Embedding.from_pretrained(FloatTensor(word_vectors))
         model = KeyedVectors.load_word2vec_format('data/GoogleNews-vectors-negative300.bin.gz', binary=True)
-        word_vectors = torch.FloatTensor(model.vectors)
+        word_vectors = torch.cuda.FloatTensor(model.vectors)
         self.word2vec = nn.Embedding.from_pretrained(FloatTensor(word_vectors))
         self.word2vec.requires_grad = False  # Not trainable
 
