@@ -24,18 +24,14 @@ def train(model, criterion, optimizer, reader, hyper_params):
         # Backward pass
         # loss = criterion(all_output, y, return_mean=False)
         loss = criterion(all_output, y)
-        metrics['RMSE'] += float(torch.sum(loss.data))
-        loss = torch.mean(loss)
+        metrics['RMSE'] += float(loss.data)
         loss.backward()
         optimizer.step()
 
-        try:
-            total_x += float(int(all_output.shape[0]))  # For every model
-        except:
-            total_x += float(int(all_output[0].shape[0]))  # For TransNet
+        total_x += float(int(all_output.shape[0]))  # For every model
         total_batches += 1
 
-    metrics['RMSE'] = round(metrics['RMSE'] / float(total_x), 4)
+    metrics['RMSE'] = round(metrics['RMSE'] / float(total_batches), 4)
 
     return metrics
 
@@ -96,7 +92,7 @@ def train_complete(hyper_params, Model, train_reader, val_reader, user_count, it
 
 def main_pytorch(hyper_params, gpu_id=None):
     from data import load_data
-    from eval import evaluate, eval_ranking
+    from eval import evaluate
     from utils import is_cuda_available
     from utils import load_user_item_counts, xavier_init, log_end_epoch
     from loss import RMSELoss

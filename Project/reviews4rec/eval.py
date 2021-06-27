@@ -3,9 +3,8 @@ from utils import *
 
 def evaluate(model, criterion, reader, hyper_params, user_count, item_count, review):
     metrics = {}
-    total_loss = FloatTensor([0.0])
     total_batches = 0.0
-    total_temp, total_temp2 = 0.0, 0.0
+    total_loss, total_observations = 0.0, 0.0
 
     user_count_mse_map = {}
     item_count_mse_map = {}
@@ -17,11 +16,8 @@ def evaluate(model, criterion, reader, hyper_params, user_count, item_count, rev
 
             output = model(data)
             rmse = criterion(output, y).data
-            total_temp += torch.sum(rmse)
-            try:
-                total_temp2 += float(int(output.shape[0]))
-            except:
-                total_temp2 += float(int(output[0].shape[0]))  # Transnets
+            total_loss += rmse
+            total_observations += float(int(output.shape[0]))
 
             # for batch in range(int(y.shape[0])):
             #     user_id = int(user[batch])
@@ -38,7 +34,7 @@ def evaluate(model, criterion, reader, hyper_params, user_count, item_count, rev
 
             total_batches += 1.0
 
-        metrics['RMSE'] = round(float(total_temp) / total_temp2, 4)
+        metrics['RMSE'] = round(float(total_loss) / total_batches, 4)
 
     return metrics, user_count_mse_map, item_count_mse_map
 
