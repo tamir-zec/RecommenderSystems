@@ -26,6 +26,6 @@ python3 preprocess_random_split.py $dataset_name $data_file_path $k_core $perc_r
 #	- Create .hdf5 files that create padded reviews for train/test/val sets ONLY for NARRE
 #	- These .hdf5 files will result in faster training/evaluation
 echo -e "\e[31m\n\nMaking quick data for NARRE..\n\n\e[0m"
-python3 make_quick_data.py $dataset_name $k_core $perc_reviews $quick_data_narre_path $data_store_path
+python3 make_quick_data.py $dataset_name $k_core $perc_reviews "NARRE" $quick_data_narre_path $data_store_path
 
 cd ..;

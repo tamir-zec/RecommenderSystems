@@ -8,8 +8,7 @@ from data import load_data
 
 
 def func(hyper_params, reader, name):
-    # base_path = sys.argv[5] + hyper_params['dataset'] + '/'
-    base_path = '/Users/shhirsch/git/RecommenderSystems/Project/reviews4rec/data/quick_data_narre/' + hyper_params['dataset'] + '/'
+    base_path = sys.argv[5] + hyper_params['dataset'] + '/'
     base_path += str(hyper_params['k_core']) + '_core/'
     if hyper_params['percent_reviews_to_keep'] != 100:
         base_path += str(hyper_params['percent_reviews_to_keep']) + '_percent/'
@@ -54,20 +53,21 @@ def func(hyper_params, reader, name):
             at += hyper_params['batch_size']
 
 
-dataset = 'Toys_and_Games' # sys.argv[1]
+dataset = sys.argv[1]
 
-for k_core in [5]:  # map(int, sys.argv[2].split(",")):
-    for percent in [100]:  # map(int, sys.argv[3].split(",")):
+for k_core in map(int, sys.argv[2].split(",")):
+    for percent in map(int, sys.argv[3].split(",")):
 
-        hyper_params = {'dataset': dataset,
-                        'k_core': k_core,
-                        'percent_reviews_to_keep': percent,
-                        'input_length': 1000,
-                        'model_type': 'NARRE',
-                        'narre_num_reviews': 10,
-                        'narre_num_words': 100,
-                        'data_dir': '/Users/shhirsch/git/RecommenderSystems/Project/reviews4rec/'
-                        }
+        hyper_params = {
+            'dataset': dataset,
+            'k_core': k_core,
+            'percent_reviews_to_keep': percent,
+            'input_length': 1000,
+            'model_type': sys.argv[4],
+            'narre_num_reviews': 10,
+            'narre_num_words': 100,
+            'data_dir': sys.argv[6]
+        }
 
         hyper_params['data_dir'] += hyper_params['dataset'] + "/"
         hyper_params['data_dir'] += str(hyper_params['k_core']) + "_core/"
