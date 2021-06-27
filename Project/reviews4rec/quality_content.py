@@ -113,7 +113,8 @@ def calc_quality_measures(review):
 for category, file_name in zip(categories, data_file_names):
     print('category: ' + category)
     data_file = os.path.join(DATA_DIR, 'reviews_' + file_name + '_5.json')
-    f = gzip.open(data_file, 'r')
+    # f = gzip.open(data_file, 'r')
+    f = open(data_file, 'r')
     users_id = []
     items_id = []
     ratings = []
