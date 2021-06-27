@@ -16,7 +16,7 @@ def evaluate(model, criterion, reader, hyper_params, user_count, item_count, rev
             _, _, _, _, _, user, item = data
 
             output = model(data)
-            rmse = criterion(output, y).data[0]
+            rmse = criterion(output, y).data
             print(rmse(type))
             print(rmse)
             total_temp += torch.sum(rmse)
