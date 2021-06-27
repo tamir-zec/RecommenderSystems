@@ -37,75 +37,81 @@ def syllable_count(word):
 
 
 def calc_quality_measures(review):
-    if len(review) == 0:
-        num_chars, punct_dense, capital_dense, start_with_capital, space_dense, num_misspellings, avg_num_syllable, \
-        word_len_entropy, words_len, num_sentences, gunning_fog, flesch_kincaid, smog, pos_entropy, formality_score = \
-            None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
 
-    else:
-        tokenized_review = word_tokenize(review)
-        # Number of characters
-        num_chars = len(review)
-        # Punctuation
-        num_punct = len([ch for ch in review if ch in punctuation])
-        punct_dense = num_punct / num_chars
-        # Capitalization
-        num_capital = len([ch for ch in review if ch.isupper()])
-        capital_dense = num_capital / num_chars
-        start_with_capital = review[0].isupper()
-        # Space Density (percent of all characters)
-        num_space = len([ch for ch in review if ch == ' '])
-        space_dense = num_space / num_chars
-        # Misspellings and typos - number of spelling mistakes
-        misspelled = spell.unknown(tokenized_review)
-        num_misspellings = len(misspelled)
-        # Number of out-of-vocabulary words
-        '''
-        To identify out-of-vocabulary words, we construct multiple lists of the k most frequent words in Yahoo! Answers, with 
-        several k values ranging between 50 and 5000. These lists are then used to calculate a set of “out-of-vocabulary” 
-        features, where each feature assumes the list of top-k words for some k is the vocabulary. An example feature created 
-        this way is “the fraction of words in an answer that do not appear in the top-1000 words of the collection
-        '''
-        # Average number of syllables per word
-        avg_num_syllable = np.mean([syllable_count(word) for word in tokenized_review])
-        # entropy of word lengths
-        word_len_entropy = entropy([len(word) for word in tokenized_review])
-        # Word length
-        words_len = len(tokenized_review)
-        # Num sentences
-        num_sentences = len(sent_tokenize(review))
+    num_chars, punct_dense, capital_dense, start_with_capital, space_dense, num_misspellings, avg_num_syllable, \
+    word_len_entropy, words_len, num_sentences, gunning_fog, flesch_kincaid, smog, pos_entropy, formality_score = \
+        None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
 
-        # Readability:
-        # Gunning Fog Index (6-17) 17-difficult, 6-easy
-        gunning_fog = textstat.gunning_fog(review)
-        # Flesch Kincaid Formula (0-100) 0-difficult, 100-easy
-        flesch_kincaid = textstat.flesch_kincaid_grade(review)
-        # SMOG Grading - need at least 30 sentences
-        smog = textstat.smog_index(review)
+    if len(review) > 0:
+        try:
+            tokenized_review = word_tokenize(review)
+            # Number of characters
+            num_chars = len(review)
+            # Punctuation
+            num_punct = len([ch for ch in review if ch in punctuation])
+            punct_dense = num_punct / num_chars
+            # Capitalization
+            num_capital = len([ch for ch in review if ch.isupper()])
+            capital_dense = num_capital / num_chars
+            start_with_capital = review[0].isupper()
+            # Space Density (percent of all characters)
+            num_space = len([ch for ch in review if ch == ' '])
+            space_dense = num_space / num_chars
+            # Misspellings and typos - number of spelling mistakes
+            misspelled = spell.unknown(tokenized_review)
+            num_misspellings = len(misspelled)
+            # Number of out-of-vocabulary words
+            '''
+            To identify out-of-vocabulary words, we construct multiple lists of the k most frequent words in Yahoo! Answers, with 
+            several k values ranging between 50 and 5000. These lists are then used to calculate a set of “out-of-vocabulary” 
+            features, where each feature assumes the list of top-k words for some k is the vocabulary. An example feature created 
+            this way is “the fraction of words in an answer that do not appear in the top-1000 words of the collection
+            '''
+            # Average number of syllables per word
+            avg_num_syllable = np.mean([syllable_count(word) for word in tokenized_review])
+            # entropy of word lengths
+            word_len_entropy = entropy([len(word) for word in tokenized_review])
+            # Word length
+            words_len = len(tokenized_review)
+            # Num sentences
+            num_sentences = len(sent_tokenize(review))
 
-        # POS - %Nouns, %Verbs
-        pos_tags = [item[1] for item in pos_tag(tokenized_review)]
-        # Entropy of the part-of-speech tags
-        pos_count = list(Counter(pos_tags).values())
-        pos_dist = np.array(pos_count) / sum(pos_count)
-        pos_entropy = entropy(pos_dist)
-        # Formality score - between 0 and 100%, 0 - completely contextualizes language, completely formal language - 100
-        noun_freq = len([pos for pos in pos_tags if pos[:2] == 'NN']) / len(tokenized_review)
-        adjective_freq = len([pos for pos in pos_tags if pos[:2] == 'JJ']) / len(tokenized_review)
-        preposition_freq = len([pos for pos in pos_tags if pos[:2] == 'IN']) / len(tokenized_review)
-        article_freq = len([pos for pos in pos_tags if pos[:2] == 'DT']) / len(tokenized_review)
-        pronoun_freq = len([pos for pos in pos_tags if pos[:2] == 'PR']) / len(tokenized_review)
-        verb_freq = len([pos for pos in pos_tags if pos[:2] == 'VB']) / len(tokenized_review)
-        adverb_freq = len([pos for pos in pos_tags if pos[:2] == 'RB']) / len(tokenized_review)
-        interjection_freq = len([pos for pos in pos_tags if pos[:2] == 'UH']) / len(tokenized_review)
-        formality_score = (noun_freq + adjective_freq + preposition_freq + article_freq -
-                           pronoun_freq - verb_freq - adverb_freq - interjection_freq + 100) / 2
+            # Readability:
+            # Gunning Fog Index (6-17) 17-difficult, 6-easy
+            gunning_fog = textstat.gunning_fog(review)
+            # Flesch Kincaid Formula (0-100) 0-difficult, 100-easy
+            flesch_kincaid = textstat.flesch_kincaid_grade(review)
+            # SMOG Grading - need at least 30 sentences
+            smog = textstat.smog_index(review)
+
+            # POS - %Nouns, %Verbs
+            pos_tags = [item[1] for item in pos_tag(tokenized_review)]
+            # Entropy of the part-of-speech tags
+            pos_count = list(Counter(pos_tags).values())
+            pos_dist = np.array(pos_count) / sum(pos_count)
+            pos_entropy = entropy(pos_dist)
+            # Formality score - between 0 and 100%, 0 - completely contextualizes language, completely formal language - 100
+            noun_freq = len([pos for pos in pos_tags if pos[:2] == 'NN']) / len(tokenized_review)
+            adjective_freq = len([pos for pos in pos_tags if pos[:2] == 'JJ']) / len(tokenized_review)
+            preposition_freq = len([pos for pos in pos_tags if pos[:2] == 'IN']) / len(tokenized_review)
+            article_freq = len([pos for pos in pos_tags if pos[:2] == 'DT']) / len(tokenized_review)
+            pronoun_freq = len([pos for pos in pos_tags if pos[:2] == 'PR']) / len(tokenized_review)
+            verb_freq = len([pos for pos in pos_tags if pos[:2] == 'VB']) / len(tokenized_review)
+            adverb_freq = len([pos for pos in pos_tags if pos[:2] == 'RB']) / len(tokenized_review)
+            interjection_freq = len([pos for pos in pos_tags if pos[:2] == 'UH']) / len(tokenized_review)
+            formality_score = (noun_freq + adjective_freq + preposition_freq + article_freq -
+                               pronoun_freq - verb_freq - adverb_freq - interjection_freq + 100) / 2
+
+        except Exception as e:
+            print('Exception: ' + str(e))
+            print('Review: ' + str(review))
 
     return num_chars, punct_dense, capital_dense, start_with_capital, space_dense, num_misspellings, avg_num_syllable, \
            word_len_entropy, words_len, num_sentences, gunning_fog, flesch_kincaid, smog, pos_entropy, formality_score
 
 
 for category, file_name in zip(categories, data_file_names):
+    print('category: ' + category)
     data_file = os.path.join(DATA_DIR, 'reviews_' + file_name + '_5.json')
     f = gzip.open(data_file, 'r')
     users_id = []
