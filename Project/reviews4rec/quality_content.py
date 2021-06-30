@@ -36,8 +36,8 @@ def syllable_count(word):
 
 def calc_quality_measures(review):
     num_chars, punct_dense, capital_dense, start_with_capital, space_dense, num_misspellings, avg_num_syllable, \
-    word_len_entropy, words_len, num_sentences, gunning_fog, flesch_kincaid, smog, pos_entropy, formality_score = \
-        None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+    word_len_entropy, num_words, num_sentences, gunning_fog, flesch_kincaid, smog, pos_entropy, noun_freq, verb_freq = \
+        None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
 
     if len(review) > 0:
         try:
