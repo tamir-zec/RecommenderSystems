@@ -131,12 +131,6 @@ for category, file_name in zip(categories, data_file_names):
             js = json.loads(line)
             if 'reviewText' not in js:
                 js['reviewText'] = ''
-            if str(js['reviewerID']) == 'unknown':
-                print("unknown")
-                continue
-            if str(js['asin']) == 'unknown':
-                print("unknown2")
-                continue
             reviews.append(js['reviewText'])
             users_id.append(str(js['reviewerID']))
             items_id.append(str(js['asin']))
