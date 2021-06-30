@@ -1,13 +1,12 @@
 import json
 import os
-from collections import Counter
 from string import punctuation
 
 import numpy as np
 import pandas as pd
-from readcalc import readcalc
 from nltk import pos_tag
 from nltk.tokenize import word_tokenize, sent_tokenize
+from readcalc import readcalc
 from scipy.stats import entropy
 from spellchecker import SpellChecker
 
@@ -146,7 +145,10 @@ for category, file_name in zip(categories, data_file_names):
     data = pd.DataFrame({'user_id': pd.Series(users_id),
                          'item_id': pd.Series(items_id),
                          'rating': pd.Series(ratings),
-                         'review': pd.Series(reviews)})[['user_id', 'item_id', 'rating', 'review']]
+                         'helpful_votes': pd.Series(helpful_votes),
+                         'total_votes': pd.Series(total_votes),
+                         'review': pd.Series(reviews)})[
+        ['user_id', 'item_id', 'rating', 'helpful_votes', 'total_votes', 'review']]
 
     quality_result = data.apply(lambda x: calc_quality_measures(x['review']), axis=1, result_type='expand')
     quality_result.columns = ['num_chars', 'punct_dense', 'capital_dense', 'start_capital', 'space_dense',
