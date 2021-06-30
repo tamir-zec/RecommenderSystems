@@ -4,6 +4,7 @@ from string import punctuation
 
 import numpy as np
 import pandas as pd
+from collections import Counter
 from nltk import pos_tag
 from nltk.tokenize import word_tokenize, sent_tokenize
 from readcalc import readcalc
@@ -87,9 +88,9 @@ def calc_quality_measures(review):
             # POS - %Nouns, %Verbs
             pos_tags = [item[1] for item in pos_tag(tokenized_review)]
             # Entropy of the part-of-speech tags
-            # pos_count = list(Counter(pos_tags).values())
-            # pos_dist = np.array(pos_count) / sum(pos_count)
-            # pos_entropy = entropy(pos_dist)
+            pos_count = list(Counter(pos_tags).values())
+            pos_dist = np.array(pos_count) / sum(pos_count)
+            pos_entropy = entropy(pos_dist)
             # Formality score - between 0 and 100%, 0 - completely contextualizes language,
             # completely formal language - 100
             noun_freq = len([pos for pos in pos_tags if pos[:2] == 'NN']) / len(tokenized_review)
