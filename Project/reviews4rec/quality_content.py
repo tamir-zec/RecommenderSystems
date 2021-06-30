@@ -1,4 +1,3 @@
-import gzip
 import json
 import os
 from collections import Counter
@@ -6,17 +5,16 @@ from string import punctuation
 
 import numpy as np
 import pandas as pd
-import textstat
+from readcalc import readcalc
 from nltk import pos_tag
 from nltk.tokenize import word_tokenize, sent_tokenize
 from scipy.stats import entropy
 from spellchecker import SpellChecker
 
-textstat.set_lang("en")
+# textstat.set_lang("en")
 spell = SpellChecker()
-
 DATA_DIR = 'data/'
-categories = ['toys' ,'kindle', 'movies']
+categories = ['toys', 'kindle', 'movies']
 data_file_names = ['Toys_and_Games', 'Kindle_Store', 'Movies_and_TV']
 
 
@@ -37,7 +35,6 @@ def syllable_count(word):
 
 
 def calc_quality_measures(review):
-
     num_chars, punct_dense, capital_dense, start_with_capital, space_dense, num_misspellings, avg_num_syllable, \
     word_len_entropy, words_len, num_sentences, gunning_fog, flesch_kincaid, smog, pos_entropy, formality_score = \
         None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
@@ -72,42 +69,48 @@ def calc_quality_measures(review):
             # entropy of word lengths
             word_len_entropy = entropy([len(word) for word in tokenized_review])
             # Word length
-            words_len = len(tokenized_review)
+            num_words = len(tokenized_review)
             # Num sentences
             num_sentences = len(sent_tokenize(review))
 
             # Readability:
+            calc_readability = readcalc.ReadCalc(review)
             # Gunning Fog Index (6-17) 17-difficult, 6-easy
-            gunning_fog = textstat.gunning_fog(review)
+            gunning_fog = calc_readability.get_gunning_fog_index()
+            # gunning_fog = textstat.gunning_fog(review)
             # Flesch Kincaid Formula (0-100) 0-difficult, 100-easy
-            flesch_kincaid = textstat.flesch_kincaid_grade(review)
+            flesch_kincaid = calc_readability.get_flesch_kincaid_grade_level()
+            # flesch_kincaid = textstat.flesch_kincaid_grade(review)
             # SMOG Grading - need at least 30 sentences
-            smog = textstat.smog_index(review)
+            smog = calc_readability.get_smog_index()
+            # smog = textstat.smog_index(review)
 
             # POS - %Nouns, %Verbs
             pos_tags = [item[1] for item in pos_tag(tokenized_review)]
             # Entropy of the part-of-speech tags
-            pos_count = list(Counter(pos_tags).values())
-            pos_dist = np.array(pos_count) / sum(pos_count)
-            pos_entropy = entropy(pos_dist)
-            # Formality score - between 0 and 100%, 0 - completely contextualizes language, completely formal language - 100
+            # pos_count = list(Counter(pos_tags).values())
+            # pos_dist = np.array(pos_count) / sum(pos_count)
+            # pos_entropy = entropy(pos_dist)
+            # Formality score - between 0 and 100%, 0 - completely contextualizes language,
+            # completely formal language - 100
             noun_freq = len([pos for pos in pos_tags if pos[:2] == 'NN']) / len(tokenized_review)
-            adjective_freq = len([pos for pos in pos_tags if pos[:2] == 'JJ']) / len(tokenized_review)
-            preposition_freq = len([pos for pos in pos_tags if pos[:2] == 'IN']) / len(tokenized_review)
-            article_freq = len([pos for pos in pos_tags if pos[:2] == 'DT']) / len(tokenized_review)
-            pronoun_freq = len([pos for pos in pos_tags if pos[:2] == 'PR']) / len(tokenized_review)
+            # adjective_freq = len([pos for pos in pos_tags if pos[:2] == 'JJ']) / len(tokenized_review)
+            # preposition_freq = len([pos for pos in pos_tags if pos[:2] == 'IN']) / len(tokenized_review)
+            # article_freq = len([pos for pos in pos_tags if pos[:2] == 'DT']) / len(tokenized_review)
+            # pronoun_freq = len([pos for pos in pos_tags if pos[:2] == 'PR']) / len(tokenized_review)
             verb_freq = len([pos for pos in pos_tags if pos[:2] == 'VB']) / len(tokenized_review)
-            adverb_freq = len([pos for pos in pos_tags if pos[:2] == 'RB']) / len(tokenized_review)
-            interjection_freq = len([pos for pos in pos_tags if pos[:2] == 'UH']) / len(tokenized_review)
-            formality_score = (noun_freq + adjective_freq + preposition_freq + article_freq -
-                               pronoun_freq - verb_freq - adverb_freq - interjection_freq + 100) / 2
+            # adverb_freq = len([pos for pos in pos_tags if pos[:2] == 'RB']) / len(tokenized_review)
+            # interjection_freq = len([pos for pos in pos_tags if pos[:2] == 'UH']) / len(tokenized_review)
+            # formality_score = (noun_freq + adjective_freq + preposition_freq + article_freq -
+            #                    pronoun_freq - verb_freq - adverb_freq - interjection_freq + 100) / 2
 
         except Exception as e:
             print('Exception: ' + str(e))
             print('Review: ' + str(review))
 
     return num_chars, punct_dense, capital_dense, start_with_capital, space_dense, num_misspellings, avg_num_syllable, \
-           word_len_entropy, words_len, num_sentences, gunning_fog, flesch_kincaid, smog, pos_entropy, formality_score
+           word_len_entropy, num_words, num_sentences, gunning_fog, flesch_kincaid, smog, pos_entropy, noun_freq, \
+           verb_freq
 
 
 for category, file_name in zip(categories, data_file_names):
@@ -119,6 +122,8 @@ for category, file_name in zip(categories, data_file_names):
     items_id = []
     ratings = []
     reviews = []
+    helpful_votes = []
+    total_votes = []
 
     # i = 0
     try:
@@ -136,6 +141,8 @@ for category, file_name in zip(categories, data_file_names):
             users_id.append(str(js['reviewerID']))
             items_id.append(str(js['asin']))
             ratings.append(str(js['overall']))
+            helpful_votes.append(str(js['helpful'][0]))
+            total_votes.append(str(js['helpful'][1]))
             # i += 1
             # if i > 10000:
             #     break
@@ -149,7 +156,7 @@ for category, file_name in zip(categories, data_file_names):
 
     quality_result = data.apply(lambda x: calc_quality_measures(x['review']), axis=1, result_type='expand')
     quality_result.columns = ['num_chars', 'punct_dense', 'capital_dense', 'start_capital', 'space_dense',
-                              'num_misspell', 'avg_num_syllable', 'word_len_entropy', 'words_len', 'num_sentences',
-                              'gunning_fog', 'flesch_kincaid', 'smog', 'pos_entropy', 'formality_score']
+                              'num_misspell', 'avg_num_syllable', 'word_len_entropy', 'num_words', 'num_sentences',
+                              'gunning_fog', 'flesch_kincaid', 'smog', 'pos_entropy', '%NN', '%VB']
     data = pd.concat([data, quality_result], axis=1)
     data.to_csv('data/' + category + '_quality.tsv', sep='\t', index=False)
