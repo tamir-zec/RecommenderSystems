@@ -134,7 +134,7 @@ for category, file_name in zip(categories, data_file_names):
             reviews.append(js['reviewText'])
             users_id.append(str(js['reviewerID']))
             items_id.append(str(js['asin']))
-            ratings.append(int(str(js['overall'])))
+            ratings.append(str(js['overall']))
             helpful_votes.append(str(int(js['helpful'][0])))
             total_votes.append(str(int(js['helpful'][1])))
             # i += 1
