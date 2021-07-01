@@ -35,9 +35,9 @@ def syllable_count(word):
 
 
 def calc_quality_measures(review):
-    num_chars, punct_dense, capital_dense, start_with_capital, space_dense, num_misspellings, avg_num_syllable, \
-    word_len_entropy, num_words, num_sentences, gunning_fog, flesch_kincaid, smog, pos_entropy, noun_freq, verb_freq = \
-        None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None
+    num_chars, num_words, num_sentences, punct_dense, capital_dense, space_dense, num_misspellings, portion_misspell, \
+    avg_num_syllable, word_len_entropy, gunning_fog, flesch_kincaid, smog, pos_entropy = \
+        0, 0, 0, 0.0, 0.0, 0.0, 0, 0.0, None, None, None, None, None, None
 
     if len(review) > 0:
         try:
@@ -54,9 +54,6 @@ def calc_quality_measures(review):
             # Space Density (percent of all characters)
             num_space = len([ch for ch in review if ch == ' '])
             space_dense = num_space / num_chars
-            # Misspellings and typos - number of spelling mistakes
-            misspelled = spell.unknown(tokenized_review)
-            num_misspellings = len(misspelled)
             # Number of out-of-vocabulary words
             '''
             To identify out-of-vocabulary words, we construct multiple lists of the k most frequent words in Yahoo! Answers, with 
@@ -72,6 +69,10 @@ def calc_quality_measures(review):
             num_words = len(tokenized_review)
             # Num sentences
             num_sentences = len(sent_tokenize(review))
+            # Misspellings and typos - number of spelling mistakes
+            misspelled = spell.unknown(tokenized_review)
+            num_misspellings = len(misspelled)
+            portion_misspell = num_misspellings / num_words
 
             # Readability:
             calc_readability = readcalc.ReadCalc(review)
@@ -93,12 +94,12 @@ def calc_quality_measures(review):
             pos_entropy = entropy(pos_dist)
             # Formality score - between 0 and 100%, 0 - completely contextualizes language,
             # completely formal language - 100
-            noun_freq = len([pos for pos in pos_tags if pos[:2] == 'NN']) / len(tokenized_review)
+            # noun_freq = len([pos for pos in pos_tags if pos[:2] == 'NN']) / len(tokenized_review)
             # adjective_freq = len([pos for pos in pos_tags if pos[:2] == 'JJ']) / len(tokenized_review)
             # preposition_freq = len([pos for pos in pos_tags if pos[:2] == 'IN']) / len(tokenized_review)
             # article_freq = len([pos for pos in pos_tags if pos[:2] == 'DT']) / len(tokenized_review)
             # pronoun_freq = len([pos for pos in pos_tags if pos[:2] == 'PR']) / len(tokenized_review)
-            verb_freq = len([pos for pos in pos_tags if pos[:2] == 'VB']) / len(tokenized_review)
+            # verb_freq = len([pos for pos in pos_tags if pos[:2] == 'VB']) / len(tokenized_review)
             # adverb_freq = len([pos for pos in pos_tags if pos[:2] == 'RB']) / len(tokenized_review)
             # interjection_freq = len([pos for pos in pos_tags if pos[:2] == 'UH']) / len(tokenized_review)
             # formality_score = (noun_freq + adjective_freq + preposition_freq + article_freq -
@@ -108,9 +109,8 @@ def calc_quality_measures(review):
             print('Exception: ' + str(e))
             print('Review: ' + str(review))
 
-    return num_chars, punct_dense, capital_dense, start_with_capital, space_dense, num_misspellings, avg_num_syllable, \
-           word_len_entropy, num_words, num_sentences, gunning_fog, flesch_kincaid, smog, pos_entropy, noun_freq, \
-           verb_freq
+    return num_chars, num_words, num_sentences, punct_dense, capital_dense, space_dense, num_misspellings, \
+           portion_misspell, avg_num_syllable, word_len_entropy, gunning_fog, flesch_kincaid, smog, pos_entropy
 
 
 for category, file_name in zip(categories, data_file_names):
@@ -152,8 +152,28 @@ for category, file_name in zip(categories, data_file_names):
         ['user_id', 'item_id', 'rating', 'helpful_votes', 'total_votes', 'review']]
 
     quality_result = data.apply(lambda x: calc_quality_measures(x['review']), axis=1, result_type='expand')
-    quality_result.columns = ['num_chars', 'punct_dense', 'capital_dense', 'start_capital', 'space_dense',
-                              'num_misspell', 'avg_num_syllable', 'word_len_entropy', 'num_words', 'num_sentences',
-                              'gunning_fog', 'flesch_kincaid', 'smog', 'pos_entropy', '%NN', '%VB']
+    quality_result.columns = ['num_chars', 'num_words', 'num_sentences', 'punct_dense', 'capital_dense', 'space_dense',
+                              'num_misspell', '%misspell', 'avg_num_syllable', 'word_len_entropy', 'gunning_fog',
+                              'flesch_kincaid', 'smog', 'pos_entropy']
     data = pd.concat([data, quality_result], axis=1)
+
+    data['rating'] = data['rating'].astype('int8')
+    data['total_votes'] = data['total_votes'].astype('int32')
+    data['helpful_votes'] = data['helpful_votes'].astype('int32')
+    data['num_chars'].fillna(0, inplace=True)
+    data['num_words'].fillna(0, inplace=True)
+    data['num_sentences'].fillna(0, inplace=True)
+    data['num_misspell'].fillna(0, inplace=True)
+    data['num_chars'] = data['num_chars'].astype('int32')
+    data['num_words'] = data['num_words'].astype('int32')
+    data['num_sentences'] = data['num_sentences'].astype('int32')
+    data['num_misspell'] = data['num_misspell'].astype('int32')
+    data['punct_dense'] = data['punct_dense'].astype('float32')
+    data['capital_dense'] = data['capital_dense'].astype('float32')
+    data['space_dense'] = data['space_dense'].astype('float32')
+    data['%misspell'] = data['%misspell'].astype('float32')
+    data['gunning_fog'] = data['gunning_fog'].astype('float32')
+    data['flesch_kincaid'] = data['flesch_kincaid'].astype('float32')
+    data['smog'] = data['smog'].astype('float32')
+
     data.to_csv('data/' + category + '_quality.tsv', sep='\t', index=False)
