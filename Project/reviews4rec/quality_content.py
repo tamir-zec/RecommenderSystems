@@ -161,7 +161,7 @@ for category, file_name in zip(categories, data_file_names):
     data['helpful_votes'] = data['helpful_votes'].astype('int32')
     data['help_rate'] = data['helpful_votes'] / data['total_votes']
     data['help_rate'] = data['help_rate'].astype('float32')
-    data['rating'] = data['rating'].astype('int8')
+    data['rating'] = data['rating'].astype(int)
     data['num_chars'].fillna(0, inplace=True)
     data['num_words'].fillna(0, inplace=True)
     data['num_sentences'].fillna(0, inplace=True)
