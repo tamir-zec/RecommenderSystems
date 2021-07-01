@@ -157,6 +157,8 @@ for category, file_name in zip(categories, data_file_names):
                               'flesch_kincaid', 'smog', 'pos_entropy']
     data = pd.concat([data, quality_result], axis=1)
 
+    data['help_rate'] = data['helpful_votes'] / data['total_votes']
+    data['help_rate'] = data['help_rate'].astype('float32')
     data['rating'] = data['rating'].astype('int8')
     data['total_votes'] = data['total_votes'].astype('int32')
     data['helpful_votes'] = data['helpful_votes'].astype('int32')
