@@ -125,7 +125,7 @@ for category, file_name in zip(categories, data_file_names):
     helpful_votes = []
     total_votes = []
 
-    i = 0
+    # i = 0
     try:
         for line in f:
             js = json.loads(line)
@@ -137,9 +137,9 @@ for category, file_name in zip(categories, data_file_names):
             ratings.append(str(js['overall']))
             helpful_votes.append(str(js['helpful'][0]))
             total_votes.append(str(js['helpful'][1]))
-            i += 1
-            if i > 10000:
-                break
+            # i += 1
+            # if i > 10000:
+            #     break
     except Exception as e:
         print(e)
 
