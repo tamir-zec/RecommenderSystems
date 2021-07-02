@@ -32,4 +32,4 @@ for category, file_name in zip(categories, data_file_names):
 
     print('Save to json file')
     with open(os.path.join(DATA_DIR, 'filtered_reviews_' + file_name + '_5.json'), 'w') as f:
-        json.dump(df.to_dict(orient='records')[0], f)
+        json.dump(df.to_json(orient='records', lines=True), f)
