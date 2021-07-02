@@ -31,5 +31,5 @@ for category, file_name in zip(categories, data_file_names):
     print(f'Total remained reviews: {len(df)}')
 
     print('Save to json file')
-    with open('reviews4rec/data/filtered_reviews_' + file_name + '_5.json', 'w') as f:
+    with open(os.path.join('filtered_reviews_' + file_name + '_5.json'), 'w') as f:
         json.dump(df.to_dict(orient='records'), f)
