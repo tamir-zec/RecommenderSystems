@@ -181,6 +181,7 @@ for k_core in map(int, sys.argv[3].split(",")):
     print("Creating final data..")
     final_first = []
 
+    i = 0
     for review in all_data:
         if review['reviewerID'] not in user_map: continue
         if review['asin'] not in item_map: continue
@@ -191,6 +192,9 @@ for k_core in map(int, sys.argv[3].split(",")):
             float(review['overall']),
             review['reviewText']
         ])
+        i += 1
+        if i == 10000:
+            break
 
     del all_data
     gc.collect()
