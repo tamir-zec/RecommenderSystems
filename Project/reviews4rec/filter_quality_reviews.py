@@ -1,6 +1,6 @@
-import json
+import ast
 import os
-
+import json
 import pandas as pd
 
 DATA_DIR = 'data/'
@@ -28,8 +28,11 @@ for category, file_name in zip(categories, data_file_names):
                        'rating': 'overall',
                        'review': 'reviewText'},
               inplace=True)
+    df['overall'] = df['overall'].astype(str)
     print(f'Total remained reviews: {len(df)}')
 
     print('Save to json file')
+    output_json = ast.literal_eval(df.to_json(orient='records'))
     with open(os.path.join(DATA_DIR, 'filtered_reviews_' + file_name + '_5.json'), 'w') as f:
-        json.dump(df.to_json(orient='records', lines=True), f)
+        for review in output_json:
+            f.write(json.dumps(review) + '\n')
