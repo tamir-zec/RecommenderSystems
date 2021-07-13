@@ -13,7 +13,7 @@ class NARRE(nn.Module):
         # word_vectors = load_obj(hyper_params['data_dir'] + '/word2vec')
         # self.word2vec = nn.Embedding.from_pretrained(FloatTensor(word_vectors))
         model = KeyedVectors.load_word2vec_format('data/GoogleNews-vectors-negative300.bin.gz', binary=True)
-        word_vectors = torch.cuda.FloatTensor(model.vectors)
+        word_vectors = torch.FloatTensor(model.vectors)
         self.word2vec = nn.Embedding.from_pretrained(FloatTensor(word_vectors))
         self.word2vec.requires_grad = False  # Not trainable
 
@@ -54,12 +54,18 @@ class NARRE(nn.Module):
         self.sigmoid = nn.Sigmoid()
         self.relu = nn.ReLU()
 
-    def attention(self, x, other_x=None, scorer=None):
+    def attention(self, x, other_x=None, scorer=None, threshold=None):
         # Attention input
         cat_input = torch.cat([x, other_x], dim=-1)
 
         # Get attention scores
         attention_scores = scorer(cat_input)[:, :, 0]
+
+        # threshold implementation
+        if threshold is not None:
+            threshold_value = attention_scores.quantile(threshold).item()
+            attention_scores = F.threshold(attention_scores, threshold_value, threshold_value)
+
         attention_scores = F.softmax(attention_scores, dim=-1)
 
         # Multiply
@@ -112,10 +118,14 @@ class NARRE(nn.Module):
         user = user.view(in_shape[0], in_shape[1], -1)  # [bsz x num_reviews x 32]
         item = item.view(in_shape2[0], in_shape2[1], -1)  # [bsz x num_reviews x 32]
 
+        # threshold values
+        user_threshold = 0.05
+        item_threshold = 0.25
+
         reviewed_items_embedded = self.item_embedding(reviewed_items)
-        user = self.attention(user, reviewed_items_embedded, self.attention_scorer_user)  # [bsz x 32]
+        user = self.attention(user, reviewed_items_embedded, self.attention_scorer_user, user_threshold)  # [bsz x 32]
         users_who_reviewed_embedded = self.user_embedding(users_who_reviewed)
-        item = self.attention(item, users_who_reviewed_embedded, self.attention_scorer_item)  # [bsz x 32]
+        item = self.attention(item, users_who_reviewed_embedded, self.attention_scorer_item, item_threshold)  # [bsz x 32]
 
         user_id = self.dropout(self.user_embedding(user_id))  # [bsz x 32]
         item_id = self.dropout(self.item_embedding(item_id))  # [bsz x 32]
