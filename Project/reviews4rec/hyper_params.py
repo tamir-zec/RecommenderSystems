@@ -50,16 +50,16 @@ def get_common_path(hyper_params):
 
 
 hyper_params = {
-    # 'dataset': 'toys',  # Which dataset to run?
-    'dataset': 'filter_toys',
+    'dataset': 'toys',  # Which dataset to run?
+    # 'dataset': 'filter_toys',
     # 'dataset': 'kindle',
     # 'dataset': 'filter_kindle',
     # 'dataset': 'movies',
     # 'dataset': 'filter_movies',
     # Pass the same human-friendly dataset name as passed in `prep_all_data.sh`
-    'k_core': 0,  # Data setting?
-    'percent_reviews_to_keep': 100,  # How many percent of total-reviews to keep? - toys & kindle
-    # 'percent_reviews_to_keep': 85,  # movies
+    'k_core': 5,  # Data setting?
+    # 'percent_reviews_to_keep': 100,  # How many percent of total-reviews to keep? - toys & kindle
+    'percent_reviews_to_keep': 90,  # movies
 
     'weight_decay': float(1e-6),  # WD for pytorch models
     'lr': 0.002,  # LR for ADAM

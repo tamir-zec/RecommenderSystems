@@ -6,7 +6,7 @@ data_file_path=$2 # Path of data file
 
 # Adjust as per your requirement
 k_core="5"
-perc_reviews="100"
+perc_reviews="90"
 
 # Where to store data?
 cwd=$(pwd)

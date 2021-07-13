@@ -63,7 +63,8 @@ def get_map_recursive(data, key, k_core):
     ret = {}
     now = 0
 
-    for review in data: # todo: when pass the quality reviews ignore k_core?
+    # When pass the quality reviews ignore k_core
+    for review in data:
         if review[key] not in ret and counts[review[key]] >= k_core:
             ret[review[key]] = now
             now += 1
@@ -163,8 +164,8 @@ def load_beer(file):
 
 dataset = sys.argv[1]
 orig_file = sys.argv[2]
-# dataset = 'toys'
-# orig_file = '/Users/shhirsch/git/RecommenderSystems/Project/reviews4rec/data/reviews_Toys_and_Games_5.json'
+# dataset = 'filter_toys'
+# orig_file = '/Users/shhirsch/git/RecommenderSystems/Project/reviews4rec/data/filtered_reviews_Toys_and_Games_5.json'
 
 for k_core in map(int, sys.argv[3].split(",")):
     print("Dataset:", dataset, ", cores:", k_core, "\n\n")
@@ -173,7 +174,7 @@ for k_core in map(int, sys.argv[3].split(",")):
     if dataset in ['ratebeer']:
         all_data = load_beer(orig_file)
     else:
-        all_data = load_obj_json(orig_file) # todo: read here the quality reviews
+        all_data = load_obj_json(orig_file)
 
     print("User and item maps..")
     user_map, item_map = get_map(all_data, 'reviewerID', 'asin', k_core=k_core)
