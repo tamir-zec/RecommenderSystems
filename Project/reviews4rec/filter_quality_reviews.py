@@ -15,7 +15,7 @@ for category, file_name in zip(categories, data_file_names):
     filter_ids.extend(df[(df['total_votes'] > 2) & (df['help_rate'] < 0.6)].index.tolist())
     filter_ids.extend(df[df['num_words'] < 6].index.tolist())
     filter_ids.extend(df[df['punct_dense'] > 0.1].index.tolist())
-    filter_ids.extend(df[df['%misspell'] > 0.1]['review'].index.tolist())
+    filter_ids.extend(df[df['%misspell'] > 0.1].index.tolist())
     filter_ids = list(set(filter_ids))
     print(f'Number of filtered reviews: {len(filter_ids)}')
     print(f'% of filtered reviews: {100 * len(filter_ids) / len(df)}')
