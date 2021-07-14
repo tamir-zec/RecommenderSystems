@@ -69,7 +69,7 @@ class NARRE(nn.Module):
         # threshold implementation
         if threshold is not None:
             threshold_value = attention_scores.quantile(threshold, dim=1, keepdim=True)
-            for i in range(100):
+            for i in range(attention_scores.shape[0]):
                 if i == 0:
                     new_attention_scores = torch.reshape(F.threshold(attention_scores[i], threshold_value[i].item(), 0),
                                                          (1, 10))
