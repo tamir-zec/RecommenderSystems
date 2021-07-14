@@ -72,8 +72,10 @@ class NARRE(nn.Module):
             threshold_value = attention_scores.quantile(threshold, dim=1, keepdim=True)
             for i in range(100):
                 attention_scores[i] = F.threshold(attention_scores[i], threshold_value[i].item(), 0)
-                # Normalizing again without the zeros
-                attention_scores[i] = attention_scores[i]/attention_scores[i].sum()
+
+            # Normalizing again without the zeros
+            sum_scores = torch.sum(attention_scores, dim=1, keepdim=True)
+            attention_scores = torch.div(attention_scores, sum_scores)
 
         # Multiply
         temp_output = attention_scores.unsqueeze(-1) * x
