@@ -68,12 +68,15 @@ class NARRE(nn.Module):
 
         # threshold implementation
         if threshold is not None:
-            # threshold_value = attention_scores.quantile(threshold).item()
             threshold_value = attention_scores.quantile(threshold, dim=1, keepdim=True)
-            new_attention_scores = torch.empty(dtype=torch.float)
             for i in range(100):
-                new_attention_scores = torch.cat(
-                    [new_attention_scores, F.threshold(attention_scores[i], threshold_value[i].item(), 0)], dim=-1)
+                if i == 0:
+                    new_attention_scores = torch.reshape(F.threshold(attention_scores[i], threshold_value[i].item(), 0),
+                                                         (1, 10))
+                else:
+                    new_attention_scores = torch.cat((
+                        new_attention_scores,
+                        torch.reshape(F.threshold(attention_scores[i], threshold_value[i].item(), 0), (1, 10))), dim=0)
 
             # Normalizing again without the zeros
             sum_scores = torch.sum(new_attention_scores, dim=1, keepdim=True)
