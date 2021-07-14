@@ -5,8 +5,6 @@ INF = 10000.0
 
 
 def train(model, criterion, optimizer, reader, hyper_params):
-    import torch
-
     model.train()
     # Initializing metrics since we will calculate RMSE on the train set on the fly
     metrics = {}

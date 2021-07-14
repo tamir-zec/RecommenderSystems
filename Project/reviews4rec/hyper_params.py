@@ -82,8 +82,11 @@ hyper_params = {
     'lamda': 0.1,  # HFT Lamda (from text)
     'latent_reg': 0.0,  # HFT MF Regularizer
 
-    'narre_num_reviews': 10,
+    'narre_num_reviews': 50,
     'narre_num_words': 100,
+
+    'user_threshold': None,
+    'item_threshold': 0.05,
 }
 
 common_path = get_common_path(hyper_params)

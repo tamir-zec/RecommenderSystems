@@ -1,9 +1,10 @@
 import torch.nn as nn
 import torch.nn.functional as F
+from gensim.models import KeyedVectors
 
 from pytorch_models.common_pytorch_models import TextCNN  # TorchFM doesn't include global bias
 from utils import *
-from gensim.models import KeyedVectors
+
 
 class NARRE(nn.Module):
     def __init__(self, hyper_params):
@@ -37,6 +38,9 @@ class NARRE(nn.Module):
             nn.Linear(self.hyper_params['latent_size'], 1)
         )
 
+        self.user_threshold = hyper_params['user_threshold']
+        self.item_threshold = hyper_params['item_threshold']
+
         self.final = nn.Sequential(
             nn.Dropout(hyper_params['dropout']),
             nn.Linear(self.hyper_params['latent_size'], self.hyper_params['latent_size']),
@@ -60,19 +64,16 @@ class NARRE(nn.Module):
 
         # Get attention scores
         attention_scores = scorer(cat_input)[:, :, 0]
+        attention_scores = F.softmax(attention_scores, dim=-1)
 
         # threshold implementation
         if threshold is not None:
-            threshold_value = attention_scores.quantile(threshold).item()
-            attention_scores = F.threshold(attention_scores, threshold_value, threshold_value)
-
-        attention_scores = F.softmax(attention_scores, dim=-1)
-
-        if threshold is not None:
-            min_val_sm = attention_scores.min().item()
-            sum_val_sm = attention_scores.sum().item()
-            attention_scores = F.threshold(attention_scores, min_val_sm, 0)
-            attention_scores = attention_scores / sum_val_sm
+            # threshold_value = attention_scores.quantile(threshold).item()
+            threshold_value = attention_scores.quantile(threshold, dim=1, keepdim=True)
+            for i in range(100):
+                attention_scores[i] = F.threshold(attention_scores[i], threshold_value[i].item(), 0)
+                # Normalizing again without the zeros
+                attention_scores[i] = attention_scores[i]/attention_scores[i].sum()
 
         # Multiply
         temp_output = attention_scores.unsqueeze(-1) * x
@@ -124,14 +125,10 @@ class NARRE(nn.Module):
         user = user.view(in_shape[0], in_shape[1], -1)  # [bsz x num_reviews x 32]
         item = item.view(in_shape2[0], in_shape2[1], -1)  # [bsz x num_reviews x 32]
 
-        # threshold values
-        user_threshold = 0.1
-        item_threshold = 0.25
-
         reviewed_items_embedded = self.item_embedding(reviewed_items)
-        user = self.attention(user, reviewed_items_embedded, self.attention_scorer_user, user_threshold)  # [bsz x 32]
+        user = self.attention(user, reviewed_items_embedded, self.attention_scorer_user, self.user_threshold)  # [bsz x 32]
         users_who_reviewed_embedded = self.user_embedding(users_who_reviewed)
-        item = self.attention(item, users_who_reviewed_embedded, self.attention_scorer_item, item_threshold)  # [bsz x 32]
+        item = self.attention(item, users_who_reviewed_embedded, self.attention_scorer_item, self.item_threshold)  # [bsz x 32]
 
         user_id = self.dropout(self.user_embedding(user_id))  # [bsz x 32]
         item_id = self.dropout(self.item_embedding(item_id))  # [bsz x 32]
