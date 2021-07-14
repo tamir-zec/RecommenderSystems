@@ -70,12 +70,14 @@ class NARRE(nn.Module):
         if threshold is not None:
             # threshold_value = attention_scores.quantile(threshold).item()
             threshold_value = attention_scores.quantile(threshold, dim=1, keepdim=True)
+            new_attention_scores = torch.empty(dtype=torch.float)
             for i in range(100):
-                attention_scores[i] = F.threshold(attention_scores[i], threshold_value[i].item(), 0)
+                new_attention_scores = torch.cat(
+                    [new_attention_scores, F.threshold(attention_scores[i], threshold_value[i].item(), 0)], dim=-1)
 
             # Normalizing again without the zeros
-            sum_scores = torch.sum(attention_scores, dim=1, keepdim=True)
-            attention_scores = torch.div(attention_scores, sum_scores)
+            sum_scores = torch.sum(new_attention_scores, dim=1, keepdim=True)
+            attention_scores = torch.div(new_attention_scores, sum_scores)
 
         # Multiply
         temp_output = attention_scores.unsqueeze(-1) * x
@@ -128,9 +130,11 @@ class NARRE(nn.Module):
         item = item.view(in_shape2[0], in_shape2[1], -1)  # [bsz x num_reviews x 32]
 
         reviewed_items_embedded = self.item_embedding(reviewed_items)
-        user = self.attention(user, reviewed_items_embedded, self.attention_scorer_user, self.user_threshold)  # [bsz x 32]
+        user = self.attention(user, reviewed_items_embedded, self.attention_scorer_user,
+                              self.user_threshold)  # [bsz x 32]
         users_who_reviewed_embedded = self.user_embedding(users_who_reviewed)
-        item = self.attention(item, users_who_reviewed_embedded, self.attention_scorer_item, self.item_threshold)  # [bsz x 32]
+        item = self.attention(item, users_who_reviewed_embedded, self.attention_scorer_item,
+                              self.item_threshold)  # [bsz x 32]
 
         user_id = self.dropout(self.user_embedding(user_id))  # [bsz x 32]
         item_id = self.dropout(self.item_embedding(item_id))  # [bsz x 32]
