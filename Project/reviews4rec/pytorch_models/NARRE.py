@@ -68,6 +68,12 @@ class NARRE(nn.Module):
 
         attention_scores = F.softmax(attention_scores, dim=-1)
 
+        if threshold is not None:
+            min_val_sm = attention_scores.min().item()
+            max_val_sm = attention_scores.min().item()
+            attention_scores = F.threshold(attention_scores, min_val_sm, 0)
+            attention_scores = attention_scores / max_val_sm
+
         # Multiply
         temp_output = attention_scores.unsqueeze(-1) * x
         return torch.sum(temp_output, dim=1)
@@ -119,7 +125,7 @@ class NARRE(nn.Module):
         item = item.view(in_shape2[0], in_shape2[1], -1)  # [bsz x num_reviews x 32]
 
         # threshold values
-        user_threshold = 0.05
+        user_threshold = None
         item_threshold = 0.25
 
         reviewed_items_embedded = self.item_embedding(reviewed_items)
