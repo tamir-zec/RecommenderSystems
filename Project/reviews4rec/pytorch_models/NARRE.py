@@ -14,7 +14,7 @@ class NARRE(nn.Module):
         # word_vectors = load_obj(hyper_params['data_dir'] + '/word2vec')
         # self.word2vec = nn.Embedding.from_pretrained(FloatTensor(word_vectors))
         model = KeyedVectors.load_word2vec_format('data/GoogleNews-vectors-negative300.bin.gz', binary=True)
-        word_vectors = torch.cuda.FloatTensor(model.vectors)
+        word_vectors = torch.FloatTensor(model.vectors)
         self.word2vec = nn.Embedding.from_pretrained(FloatTensor(word_vectors))
         self.word2vec.requires_grad = False  # Not trainable
 
@@ -71,12 +71,15 @@ class NARRE(nn.Module):
             threshold_value = attention_scores.quantile(threshold, dim=1, keepdim=True)
             for i in range(attention_scores.shape[0]):
                 if i == 0:
-                    new_attention_scores = torch.reshape(F.threshold(attention_scores[i], threshold_value[i].item(), 0),
-                                                         (1, 10))
+                    new_attention_scores = torch.reshape(F.threshold(attention_scores[i], threshold_value[i].item(), 0), (1, 10))
+                    if torch.sum(new_attention_scores) == 0:
+                        new_attention_scores += 1/10
                 else:
+                    temp_attention_sc = torch.reshape(F.threshold(attention_scores[i], threshold_value[i].item(), 0), (1, 10))
+                    if torch.sum(temp_attention_sc) == 0:
+                        temp_attention_sc += 1/10
                     new_attention_scores = torch.cat((
-                        new_attention_scores,
-                        torch.reshape(F.threshold(attention_scores[i], threshold_value[i].item(), 0), (1, 10))), dim=0)
+                        new_attention_scores, temp_attention_sc), dim=0)
 
             # Normalizing again without the zeros
             sum_scores = torch.sum(new_attention_scores, dim=1, keepdim=True)
